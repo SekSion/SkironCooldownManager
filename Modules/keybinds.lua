@@ -623,19 +623,6 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1)
     end)
 end)
 
--- ── Reload dialog ────────────────────────────────────────────────────────────
-
-StaticPopupDialogs["SKIRCM_KB_RELOAD"] = {
-    text = "Reload UI to apply keybind changes?",
-    button1 = "Reload",
-    button2 = "Later",
-    OnAccept = ReloadUI,
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3,
-}
-
 -- ── Lifecycle ────────────────────────────────────────────────────────────────
 
 function Keybinds.Enable()
@@ -649,13 +636,19 @@ function Keybinds.Enable()
     Keybinds.Rebuild()
 end
 
+function Keybinds.Disable()
+    eventFrame:UnregisterAllEvents()
+    keyMap = nil
+    combatDirty = false
+    pendingRebuild = false
+    Keybinds.RefreshAllFrames()
+end
+
 function Keybinds.OnSettingChanged()
     local cfg = GetKeybindCfg()
     if cfg and cfg.enabled then
         Keybinds.Enable()
     else
-        -- Remove the public reference so every call-site guard becomes a free no-op.
-        -- Re-enabled only via reload (SKIRCM_KB_RELOAD dialog).
-        SCM.Keybinds = nil
+        Keybinds.Disable()
     end
 end

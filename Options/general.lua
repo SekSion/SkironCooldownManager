@@ -605,8 +605,7 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 		enabled:SetValue(kb.enabled)
 		enabled:SetCallback("OnValueChanged", function(_, _, value)
 			kb.enabled = value
-			local popup = StaticPopup_Show("SKIRCM_KB_RELOAD")
-			if popup then popup:SetFrameStrata("FULLSCREEN_DIALOG") end
+			SCM.Keybinds.OnSettingChanged()
 		end)
 		mainGroup:AddChild(enabled)
 
