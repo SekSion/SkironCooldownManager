@@ -256,6 +256,9 @@ local function OnProfileChanged(_, _, _, skipReset)
 
 	SCM:InvalidateAnchorLinks()
 
+	SCM.appliedOptions = nil
+	SCM:ApplyOptions()
+
 	RefreshCooldownViewerData(true)
 	if SCM.Keybinds then SCM.Keybinds.OnSettingChanged() end
 
