@@ -257,7 +257,7 @@ local function ProcessBuffIcon(child, childData, options)
 
 	local isInactive
 	if child.SCMCheckCooldownFrame then
-		isInactive = not child.Cooldown:IsShown()
+		isInactive = not child.Cooldown:IsVisible()
 	else
 		isInactive = (not child.auraInstanceID and (FindSpellOverrideByID(child.SCMSpellID) == child.SCMSpellID))
 	end

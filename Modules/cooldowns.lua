@@ -101,7 +101,7 @@ local function OnBuffHidePandemicStateFrame(self)
 end
 
 function Cooldowns.SetupBuffIconHooks(child, options)
-	if child.SCMShowHook then
+	if child.SCMShowHook and (not Constants.FakeAuras[child.SCMSpellID] or child.SCMCheckCooldownFrame) then
 		return
 	end
 
@@ -109,26 +109,32 @@ function Cooldowns.SetupBuffIconHooks(child, options)
 	child.SCMBuffOptions = options
 
 	-- Cooldowns
+	if Constants.FakeAuras[child.SCMSpellID] or Constants.TargetAuras[child.SCMSpellID] then
+		if not child.SCMCooldownHooked then
+			hooksecurefunc(child.Cooldown, "SetCooldown", OnBuffCooldownSet)
+			hooksecurefunc(child.Cooldown, "Clear", OnBuffCooldownEnd)
+			child.Cooldown:HookScript("OnCooldownDone", OnBuffCooldownEnd)
+			child.SCMCooldownHooked = true
+		end
 
-	if Constants.FakeAuras[child.SCMSpellID] then
-		hooksecurefunc(child.Cooldown, "SetCooldown", OnBuffCooldownSet)
-		hooksecurefunc(child.Cooldown, "Clear", OnBuffCooldownEnd)
-		child.Cooldown:HookScript("OnCooldownDone", OnBuffCooldownEnd)
-		child.SCMCheckCooldownFrame = true
-	elseif Constants.TargetAuras[child.SCMSpellID] then
-		hooksecurefunc(child.Cooldown, "SetCooldown", OnBuffCooldownSet)
-		hooksecurefunc(child.Cooldown, "Clear", OnBuffCooldownEnd)
-		--child.Cooldown:HookScript("OnCooldownDone", OnBuffCooldownEnd)
 		child.SCMCheckCooldownFrame = true
 	else
-		hooksecurefunc(child, "OnAuraInstanceInfoSet", OnBuffCooldownSet)
-		hooksecurefunc(child, "OnAuraInstanceInfoCleared", OnBuffCooldownEnd)
+		if not child.SCMAuraHooked then
+			hooksecurefunc(child, "OnAuraInstanceInfoSet", OnBuffCooldownSet)
+			hooksecurefunc(child, "OnAuraInstanceInfoCleared", OnBuffCooldownEnd)
+			child.SCMAuraHooked = true
+		end
+
+		child.SCMCheckCooldownFrame = nil
 	end
 
 	-- Pandmic Alerts
-	hooksecurefunc(child, "TriggerPandemicAlert", OnBuffTriggerPandemicAlert)
-	hooksecurefunc(child, "ShowPandemicStateFrame", OnBuffShowPandemicStateFrame)
-	hooksecurefunc(child, "HidePandemicStateFrame", OnBuffHidePandemicStateFrame)
+	if not child.SCMPandemicHooked then
+		hooksecurefunc(child, "TriggerPandemicAlert", OnBuffTriggerPandemicAlert)
+		hooksecurefunc(child, "ShowPandemicStateFrame", OnBuffShowPandemicStateFrame)
+		hooksecurefunc(child, "HidePandemicStateFrame", OnBuffHidePandemicStateFrame)
+		child.SCMPandemicHooked = true
+	end
 end
 
 function Cooldowns.IsChildOnCooldown(child)
