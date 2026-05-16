@@ -218,7 +218,6 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 		showAnchorHighlight:SetLabel("Show Anchor Highlight")
 		showAnchorHighlight:SetCallback("OnValueChanged", function(self, event, value)
 			options.showAnchorHighlight = value
-			--
 			if value and SCM.OptionsFrame then
 				for _, anchorFrame in pairs(SCM.anchorFrames) do
 					anchorFrame.debugTexture:Show()
@@ -473,7 +472,7 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 		tabWidget:AddChild(iconSettings)
 
 		local iconZoom = AceGUI:Create("Slider")
-		iconZoom:SetRelativeWidth(0.5)
+		iconZoom:SetRelativeWidth(0.33)
 		iconZoom:SetValue(options.iconZoom or 1)
 		iconZoom:SetLabel("Zoom")
 		iconZoom:SetSliderValues(0.01, 0.4, 0.01)
@@ -485,7 +484,7 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 		iconSettings:AddChild(iconZoom)
 
 		local iconFrameStrata = AceGUI:Create("Dropdown")
-		iconFrameStrata:SetRelativeWidth(0.5)
+		iconFrameStrata:SetRelativeWidth(0.33)
 		iconFrameStrata:SetLabel("Frame Strata")
 		iconFrameStrata:SetList(SCM.Constants.FrameStrata, SCM.Constants.FrameStrataSorted)
 		iconFrameStrata:SetValue(options.iconFrameStrata or "")
@@ -494,6 +493,22 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 			SCM:ApplyAllCDManagerConfigs()
 		end)
 		iconSettings:AddChild(iconFrameStrata)
+
+		local keepIconSquareRatio = AceGUI:Create("CheckBox")
+		keepIconSquareRatio:SetRelativeWidth(0.33)
+		keepIconSquareRatio:SetLabel("Keep Icon Square Ratio")
+		keepIconSquareRatio:SetValue(options.keepIconSquareRatio)
+		keepIconSquareRatio:SetCallback("OnValueChanged", function(_, _, value)
+			options.keepIconSquareRatio = value
+			SCM:ApplyAllCDManagerConfigs()
+		end)
+		iconSettings:AddChild(keepIconSquareRatio)
+
+		local borderSettings = AceGUI:Create("InlineGroup")
+		borderSettings:SetLayout("flow")
+		borderSettings:SetFullWidth(true)
+		borderSettings:SetTitle("Border")
+		tabWidget:AddChild(borderSettings)
 
 		local borderSize = AceGUI:Create("Slider")
 		borderSize:SetRelativeWidth(0.5)
@@ -506,7 +521,7 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 			SCM:UpdateCastBar()
 			SCM:ApplyAllCDManagerConfigs()
 		end)
-		iconSettings:AddChild(borderSize)
+		borderSettings:AddChild(borderSize)
 
 		local borderColor = AceGUI:Create("ColorPicker")
 		borderColor:SetRelativeWidth(0.5)
@@ -519,7 +534,7 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 			options.borderColor = { r = r, g = g, b = b, a = a }
 			SCM:ApplyAllCDManagerConfigs()
 		end)
-		iconSettings:AddChild(borderColor)
+		borderSettings:AddChild(borderColor)
 
 		local chargeSettings = AceGUI:Create("InlineGroup")
 		chargeSettings:SetLayout("flow")

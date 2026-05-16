@@ -153,6 +153,30 @@ local function ApplyCooldownStyle(child, options)
 	end
 end
 
+local function ApplyZoomSettings(child, options)
+	local iconZoom = options.iconZoom
+
+	local xCrop = 1 - iconZoom
+	local yCrop = 1 - iconZoom
+
+	if options.keepIconSquareRatio and child.SCMWidth and child.SCMHeight then
+		local ratio = child.SCMWidth / child.SCMHeight
+
+		if ratio > 1 then
+			yCrop = xCrop / ratio
+		elseif ratio < 1 then
+			xCrop = yCrop * ratio
+		end
+	end
+
+	local left = (1 - xCrop) / 2
+	local right = 1 - left
+	local top = (1 - yCrop) / 2
+	local bottom = 1 - top
+
+	child.Icon:SetTexCoord(left, right, top, bottom)
+end
+
 function SCM:SkinChild(child, childConfig)
 	local options = self.db.profile.options
 
@@ -189,11 +213,8 @@ function SCM:SkinChild(child, childConfig)
 		child.Icon:SetPoint("TOPLEFT", child, "TOPLEFT", borderSize, -borderSize)
 		child.Icon:SetPoint("BOTTOMRIGHT", child, "BOTTOMRIGHT", -borderSize, borderSize)
 
-		local iconZoom = options.iconZoom
-		child.Icon:SetTexCoord(iconZoom, 1 - iconZoom, iconZoom, 1 - iconZoom)
-
-		local fontPath = LSM:Fetch("font", options.chargeFont)
-		ApplyChargeAndApplicationStyle(child, options, fontPath)
+		ApplyZoomSettings(child, options)
+		ApplyChargeAndApplicationStyle(child, options, LSM:Fetch("font", options.chargeFont))
 		ApplyCooldownStyle(child, options)
 	elseif not child.SCMSkinned then
 		child.SCMSkinned = true
@@ -250,8 +271,8 @@ function SCM:SkinChild(child, childConfig)
 			child.DebuffBorder:SetAlpha(0)
 		end
 
-		local fontPath = LSM:Fetch("font", options.chargeFont)
-		ApplyChargeAndApplicationStyle(child, options, fontPath)
+		ApplyZoomSettings(child, options)
+		ApplyChargeAndApplicationStyle(child, options, LSM:Fetch("font", options.chargeFont))
 		ApplyCooldownStyle(child, options)
 	end
 
