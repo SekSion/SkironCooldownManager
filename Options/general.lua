@@ -241,7 +241,7 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 			options.savePosition = value
 		end)
 		skinningSettings:AddChild(savePosition)
-		
+
 		local menuScale = AceGUI:Create("Slider")
 		menuScale:SetRelativeWidth(1)
 		menuScale:SetLabel("Options Scale")
@@ -793,7 +793,7 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 			breakpointButtonGroup:AddChild(removeBreakpointButton)
 
 			local minValueInput = AceGUI:Create("EditBox")
-			minValueInput:SetRelativeWidth(0.5)
+			minValueInput:SetRelativeWidth(0.33)
 			minValueInput:SetLabel("Min Value (in seconds)")
 			minValueInput:SetText(tostring(selectedBreakpoint.threshold or 0))
 			minValueInput:SetCallback("OnEnterPressed", function(input, _, text)
@@ -812,14 +812,13 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 				selectedBreakpoint.components = GetCooldownBreakpointComponents(displayStyle, value)
 
 				SCM.Cooldowns:ApplyFormatterSettings()
-				self:SelectTab(breakpointIndex)
 			end)
 			self:AddChild(minValueInput)
 
 			local displayStyle = selectedBreakpoint.displayStyle
 
 			local breakpointDisplayStyle = AceGUI:Create("Dropdown")
-			breakpointDisplayStyle:SetRelativeWidth(0.5)
+			breakpointDisplayStyle:SetRelativeWidth(0.33)
 			breakpointDisplayStyle:SetLabel("Display Style")
 			breakpointDisplayStyle:SetList(Constants.DisplayStyle[1], Constants.DisplayStyle[2])
 			breakpointDisplayStyle:SetValue(displayStyle)
@@ -829,13 +828,30 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 				selectedBreakpoint.displayStyle = value
 				selectedBreakpoint.step = styleSettings.step
 				selectedBreakpoint.rounding = styleSettings.rounding
-				selectedBreakpoint.format = styleSettings.format
+
+				if selectedBreakpoint.color then
+					selectedBreakpoint.format = CreateColor(unpack(selectedBreakpoint.color)):WrapTextInColorCode(selectedBreakpoint.format)
+				else
+					selectedBreakpoint.format = styleSettings.format
+				end
 				selectedBreakpoint.components = GetCooldownBreakpointComponents(value, selectedBreakpoint.threshold or 0)
 
 				SCM.Cooldowns:ApplyFormatterSettings()
-				self:SelectTab(breakpointIndex)
 			end)
 			self:AddChild(breakpointDisplayStyle)
+
+			local breakpointColor = AceGUI:Create("ColorPicker")
+			breakpointColor:SetRelativeWidth(0.33)
+			breakpointColor:SetLabel("Color")
+			breakpointColor:SetColor(unpack(selectedBreakpoint.color or { 1, 1, 1, 1 }))
+			breakpointColor:SetCallback("OnValueChanged", function(_, _, r, g, b, a)
+				selectedBreakpoint.color = { r, g, b, a }
+				selectedBreakpoint.components = GetCooldownBreakpointComponents(value, selectedBreakpoint.threshold or 0)
+				selectedBreakpoint.format = CreateColor(r, g, b, a):WrapTextInColorCode(selectedBreakpoint.format)
+
+				SCM.Cooldowns:ApplyFormatterSettings()
+			end)
+			self:AddChild(breakpointColor)
 		end)
 		breakpointTabs:SelectTab(1)
 		cooldownTimerSettings:AddChild(breakpointTabs)
