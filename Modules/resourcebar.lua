@@ -1329,7 +1329,7 @@ function SCMResourceBarControllerMixin:RefreshBarDisplay(bar, refreshTicks, skip
 	end
 
 	if bar.resourceKind == "stagger" and self.barOptions.staggerDisplayAsPercent then
-		staggerPercent = staggerPercent or (maxValue > 0 and currentValue / maxValue or 0)
+		staggerPercent = staggerPercent or (not issecretvalue(maxValue) and (maxValue > 0 and currentValue / maxValue or 0)) or 0
 		textValue:SetText(floor(staggerPercent * 100 + 0.5) .. "%")
 	elseif bar.powerType == Enum.PowerType.Mana then
 		local manaPercent = UnitPowerPercent("player", bar.powerType, false, CurveConstants.ScaleTo100)
