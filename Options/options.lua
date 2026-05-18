@@ -516,7 +516,9 @@ local function OpenOptions()
 			SCM:RestoreBlizzardGlows()
 		end)
 
-		LibWindow.SavePosition(frame.frame)
+		if options.savePosition then
+			LibWindow.SavePosition(frame.frame)
+		end
 	end)
 
 	if SCM.db.profile.options.showAnchorHighlight then
