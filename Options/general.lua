@@ -830,7 +830,7 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 				selectedBreakpoint.rounding = styleSettings.rounding
 
 				if selectedBreakpoint.color then
-					selectedBreakpoint.format = CreateColor(unpack(selectedBreakpoint.color)):WrapTextInColorCode(selectedBreakpoint.format)
+					selectedBreakpoint.format = CreateColor(unpack(selectedBreakpoint.color)):WrapTextInColorCode(C_StringUtil.StripHyperlinks(selectedBreakpoint.format))
 				else
 					selectedBreakpoint.format = styleSettings.format
 				end
@@ -846,8 +846,7 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 			breakpointColor:SetColor(unpack(selectedBreakpoint.color or { 1, 1, 1, 1 }))
 			breakpointColor:SetCallback("OnValueChanged", function(_, _, r, g, b, a)
 				selectedBreakpoint.color = { r, g, b, a }
-				selectedBreakpoint.components = GetCooldownBreakpointComponents(value, selectedBreakpoint.threshold or 0)
-				selectedBreakpoint.format = CreateColor(r, g, b, a):WrapTextInColorCode(selectedBreakpoint.format)
+				selectedBreakpoint.format = CreateColor(r, g, b, a):WrapTextInColorCode(C_StringUtil.StripHyperlinks(selectedBreakpoint.format))
 
 				SCM.Cooldowns:ApplyFormatterSettings()
 			end)
