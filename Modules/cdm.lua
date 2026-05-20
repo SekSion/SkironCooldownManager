@@ -415,8 +415,8 @@ local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, 
 	end
 
 	local childAnchor, useProxyAnchor = SCM:GetManagedAnchorChildAnchor(group, groupAnchor, point, anchor, relativePoint, xOffset, yOffset, growDir, initialWidth, anchorOffsetY)
-	local anchorOffsetChanged = SCM:UpdateAnchorOffset(group, true)
-	if useProxyAnchor and changedGroups and anchorOffsetChanged then
+	SCM:UpdateAnchorOffset(group, true)
+	if useProxyAnchor and changedGroups then
 		changedGroups[group] = true
 	end
 
