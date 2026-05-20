@@ -184,7 +184,7 @@ local function UpdateAnchorLinks(config)
 	return anchorLinks
 end
 
-local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, changedGroups, resetSize)
+local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, changedGroups, resetSize, checkDuplicates)
 	local state = GetAnchorState(group)
 	local rowConfig = (anchorConfig and anchorConfig.rowConfig and #anchorConfig.rowConfig > 0) and anchorConfig.rowConfig or DEFAULT_ROW_CONFIG
 	local lastRowConfig = rowConfig[#rowConfig]
@@ -196,6 +196,7 @@ local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, 
 	local initialHeight = rowConfig[1].iconHeight or rowConfig[1].size or 47
 	local isCentered = growDir == "CENTER" or growDir == "CENTERED"
 	local isFixed = growDir == "FIXED"
+	local lockGroupSize = group == 1
 	local growsUp = secondaryGrowDir == "UP"
 	local verticalPoint = growsUp and "BOTTOM" or "TOP"
 	local startPoint = (isCentered or isFixed) and verticalPoint or (verticalPoint .. (growDir == "LEFT" and "RIGHT" or "LEFT"))
@@ -211,62 +212,72 @@ local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, 
 	local totalChildren
 	local scaleData = anchorConfig and anchorConfig.advancedScale
 	local configuredChildren = Cache.cachedChildrenTbl[group]
-	local uniqueChildren = Cache.cachedLayoutChildren
-	local seenCooldownIDs = Cache.cachedLayoutCooldownIDs
 	local layoutChildCount
+	local uniqueChildren
+	local visibleChildCount = #visibleChildren
 
 	table.sort(visibleChildren, SortBySCMOrder)
 
-	if isFixed then
+	if isFixed or lockGroupSize then
 		layoutChildren = configuredChildren or visibleChildren
 		table.sort(layoutChildren, SortBySCMOrder)
 	end
 
 	Cache.cachedAnchorChildren[group] = visibleChildren
-	if not uniqueChildren then
-		uniqueChildren = {}
-		Cache.cachedLayoutChildren = uniqueChildren
-	else
-		wipe(uniqueChildren)
-	end
-	if not seenCooldownIDs then
-		seenCooldownIDs = {}
-		Cache.cachedLayoutCooldownIDs = seenCooldownIDs
-	else
-		wipe(seenCooldownIDs)
-	end
+	checkDuplicates = checkDuplicates and state.visibleChildCount ~= visibleChildCount
+	state.visibleChildCount = visibleChildCount
 
 	layoutChildCount = #layoutChildren
-	totalChildren = 0
-	for index = 1, layoutChildCount do
-		local child = layoutChildren[index]
-		local cooldownID = child.SCMCooldownID
-		child.SCMLayoutNextDuplicate = nil
+	totalChildren = layoutChildCount
 
-		if cooldownID then
-			local masterChild = seenCooldownIDs[cooldownID]
-			if masterChild then
-				child.SCMLayoutNextDuplicate = masterChild.SCMLayoutNextDuplicate
-				masterChild.SCMLayoutNextDuplicate = child
+	if checkDuplicates then
+		uniqueChildren = Cache.cachedLayoutChildren
+		local seenCooldownIDs = Cache.cachedLayoutCooldownIDs
+		if not uniqueChildren then
+			uniqueChildren = {}
+			Cache.cachedLayoutChildren = uniqueChildren
+		else
+			wipe(uniqueChildren)
+		end
+		if not seenCooldownIDs then
+			seenCooldownIDs = {}
+			Cache.cachedLayoutCooldownIDs = seenCooldownIDs
+		else
+			wipe(seenCooldownIDs)
+		end
+
+		totalChildren = 0
+		for index = 1, layoutChildCount do
+			local child = layoutChildren[index]
+			local cooldownID = child.SCMCooldownID
+			child.SCMLayoutNextDuplicate = nil
+
+			if cooldownID then
+				local masterChild = seenCooldownIDs[cooldownID]
+				if masterChild then
+					child.SCMLayoutNextDuplicate = masterChild.SCMLayoutNextDuplicate
+					masterChild.SCMLayoutNextDuplicate = child
+				else
+					seenCooldownIDs[cooldownID] = child
+					totalChildren = totalChildren + 1
+					uniqueChildren[totalChildren] = child
+				end
 			else
-				seenCooldownIDs[cooldownID] = child
 				totalChildren = totalChildren + 1
 				uniqueChildren[totalChildren] = child
 			end
-		else
-			totalChildren = totalChildren + 1
-			uniqueChildren[totalChildren] = child
 		end
+		wipe(seenCooldownIDs)
+		layoutChildren = uniqueChildren
+		layoutChildCount = totalChildren
 	end
-	wipe(seenCooldownIDs)
-	layoutChildren = uniqueChildren
-	layoutChildCount = totalChildren
+	local hardLimitChildCount = lockGroupSize and layoutChildCount or visibleChildCount
 
 	while childIndex <= totalChildren do
 		local currentRowConfig = rowConfig[rowIndex] or lastRowConfig
 		local rowLimit = max(currentRowConfig.limit or 8, 1)
 		if currentRowConfig.hardLimit then
-			totalChildren = min(#visibleChildren, layoutChildCount, childIndex + rowLimit - 1)
+			totalChildren = min(hardLimitChildCount, layoutChildCount, childIndex + rowLimit - 1)
 		end
 
 		local rowIconWidth = currentRowConfig.iconWidth or currentRowConfig.size or 47
@@ -386,29 +397,31 @@ local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, 
 				SCM:SkinBuffBar(child, child.SCMConfig)
 			end
 
-			local duplicateChild = child.SCMLayoutNextDuplicate
-			child.SCMLayoutNextDuplicate = nil
-			while duplicateChild do
-				child = duplicateChild
-				child.SCMRowConfig = row.rowConfig
-				child.SCMAnchorFrameStrata = anchorConfig and anchorConfig.frameStrata or nil
-				if child.SCMLayoutLimited then
-					child.SCMLayoutLimited = nil
-					Icons.SetChildVisibilityState(child, child.SCMShouldBeVisible, true)
-				end
-
-				if child.SCMShouldBeVisible then
-					SCM:UpdateManagedAnchorChild(child, childAnchor, startPoint, offsetX, row.offsetY, row.rowIconWidth, row.rowIconHeight, useProxyAnchor)
-				end
-
-				if not child.SCMBuffBar then
-					SCM:SkinChild(child, child.SCMConfig)
-				else
-					SCM:SkinBuffBar(child, child.SCMConfig)
-				end
-
-				duplicateChild = child.SCMLayoutNextDuplicate
+			if checkDuplicates then
+				local duplicateChild = child.SCMLayoutNextDuplicate
 				child.SCMLayoutNextDuplicate = nil
+				while duplicateChild do
+					child = duplicateChild
+					child.SCMRowConfig = row.rowConfig
+					child.SCMAnchorFrameStrata = anchorConfig and anchorConfig.frameStrata or nil
+					if child.SCMLayoutLimited then
+						child.SCMLayoutLimited = nil
+						Icons.SetChildVisibilityState(child, child.SCMShouldBeVisible, true)
+					end
+
+					if child.SCMShouldBeVisible then
+						SCM:UpdateManagedAnchorChild(child, childAnchor, startPoint, offsetX, row.offsetY, row.rowIconWidth, row.rowIconHeight, useProxyAnchor)
+					end
+
+					if not child.SCMBuffBar then
+						SCM:SkinChild(child, child.SCMConfig)
+					else
+						SCM:SkinBuffBar(child, child.SCMConfig)
+					end
+
+					duplicateChild = child.SCMLayoutNextDuplicate
+					child.SCMLayoutNextDuplicate = nil
+				end
 			end
 		end
 	end
@@ -422,18 +435,20 @@ local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, 
 				Icons.SetChildVisibilityState(child, child.SCMShouldBeVisible, true)
 			end
 
-			local duplicateChild = child.SCMLayoutNextDuplicate
-			child.SCMLayoutNextDuplicate = nil
-			while duplicateChild do
-				child = duplicateChild
-				if child.SCMShouldBeVisible then
-					child.SCMLayoutLimited = true
-					child.SCMLayoutApplied = nil
-					Icons.SetChildVisibilityState(child, child.SCMShouldBeVisible, true)
-				end
-
-				duplicateChild = child.SCMLayoutNextDuplicate
+			if checkDuplicates then
+				local duplicateChild = child.SCMLayoutNextDuplicate
 				child.SCMLayoutNextDuplicate = nil
+				while duplicateChild do
+					child = duplicateChild
+					if child.SCMShouldBeVisible then
+						child.SCMLayoutLimited = true
+						child.SCMLayoutApplied = nil
+						Icons.SetChildVisibilityState(child, child.SCMShouldBeVisible, true)
+					end
+
+					duplicateChild = child.SCMLayoutNextDuplicate
+					child.SCMLayoutNextDuplicate = nil
+				end
 			end
 		end
 	end
@@ -464,7 +479,9 @@ local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, 
 	if boundsChanged and changedGroups then
 		changedGroups[group] = true
 	end
-	wipe(uniqueChildren)
+	if uniqueChildren then
+		wipe(uniqueChildren)
+	end
 end
 
 local function LayoutEmptyAnchorGroup(group, anchorConfig, scopedAnchorGroups, changedGroups, options)
@@ -575,7 +592,7 @@ local function OrderCDManagerSpells_Actual(updateScope, scopedAnchorGroupsOverri
 	end
 
 	for group, visibleChildren in pairs(Cache.cachedCooldownFrameTbl) do
-		LayoutAnchorGroup(group, visibleChildren, Utils.GetAnchorConfigForGroup(config, group, SCM.globalAnchorConfig, SCM.buffBarsAnchorConfig), options, changedGroups)
+		LayoutAnchorGroup(group, visibleChildren, Utils.GetAnchorConfigForGroup(config, group, SCM.globalAnchorConfig, SCM.buffBarsAnchorConfig), options, changedGroups, nil, (updateScope == UPDATE_SCOPE.BUFF or updateScope == UPDATE_SCOPE.ALL))
 	end
 
 	if not isFullBuffBarUpdate then

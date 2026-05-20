@@ -18,13 +18,11 @@ SCM.Templates = {}
 
 local function OnEssentialCooldownViewerLayout(viewer)
 	SCM:InvalidateViewerChildrenCache(viewer)
-	SCM:InvalidateViewerChildrenCache(UtilityCooldownViewer)
 	SCM:ApplyEssentialCDManagerConfig()
 end
 
 local function OnUtilityCooldownViewerLayout(viewer)
 	SCM:InvalidateViewerChildrenCache(viewer)
-	SCM:InvalidateViewerChildrenCache(EssentialCooldownViewer)
 	SCM:ApplyUtilityCDManagerConfig()
 end
 
