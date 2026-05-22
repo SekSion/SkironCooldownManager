@@ -22,6 +22,7 @@ local CAST_STOP_EVENTS = {
 }
 
 local ICON_SPACING = 0
+local ANCHOR_PROXY_SIZE_CHANGED_EVENT = "SkironCooldownManager.AnchorProxy.SizeChanged"
 
 local function ApplyRelativeAnchor(frame, anchors, relativeFrame)
 	frame:ClearAllPoints()
@@ -105,7 +106,7 @@ local function GetMatchedCastBarWidth(options)
 		return
 	end
 
-	local anchorFrame = SCM.Utils.GetAnchorFrame(options.anchors[2])
+	local anchorFrame = SCM.Utils.GetActiveAnchorFrame(options.anchors[2])
 	if not anchorFrame or not anchorFrame.GetWidth then
 		return
 	end
@@ -155,7 +156,7 @@ local function UpdateStatusBarLook(fillColor, bgColor)
 
 	castBar.CurrentFillColor = foregroundColor
 	castBar:SetSize(width, options.height)
-	anchorFrame = anchorFrame or SCM.Utils.GetAnchorFrame(options.anchors[2])
+	anchorFrame = anchorFrame or SCM.Utils.GetActiveAnchorFrame(options.anchors[2])
 	castBar:ClearAllPoints()
 	castBar:SetPoint(options.anchors[1], anchorFrame or UIParent, options.anchors[3], options.anchors[4], options.anchors[5])
 	castBar:SetFrameStrata(options.frameStrata or "BACKGROUND")
@@ -532,6 +533,9 @@ function SCM:CreateCastBar()
 	castBar.Spark = castBar:CreateTexture(nil, "OVERLAY", nil, 2)
 
 	self.CastBar = castBar
+	EventRegistry:RegisterCallback(ANCHOR_PROXY_SIZE_CHANGED_EVENT, function()
+		SCM:RefreshCastBarWidth()
+	end, castBar)
 	self:UpdateCastBar()
 	return castBar
 end

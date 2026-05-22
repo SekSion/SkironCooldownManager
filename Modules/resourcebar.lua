@@ -3,6 +3,7 @@ local LSM = LibStub("LibSharedMedia-3.0")
 
 local Utils = SCM.Utils
 local RESOURCE_BAR_FRAME_NAME = "SCM_ResourceBarContainer"
+local ANCHOR_PROXY_SIZE_CHANGED_EVENT = "SkironCooldownManager.AnchorProxy.SizeChanged"
 
 local UNIT_POWER_SPELL_IDS = Constants.UnitPowerSpellIDs
 local SPELL_ID_VOID_METAMORPHOSIS = UNIT_POWER_SPELL_IDS.VOID_METAMORPHOSIS_SPELL_ID or 1217607
@@ -999,15 +1000,11 @@ function SCMResourceBarControllerMixin:ApplyResourceBarOptions()
 end
 
 function SCMResourceBarControllerMixin:ApplyFrameWidthOptions(bar)
-	if InCombatLockdown() then
-		return false
-	end
-
 	local specificBarOptions = bar.barOptions
 	local generalBarOptions = self.barOptions
 	local anchor = generalBarOptions.anchorFrame or DEFAULT_RESOURCE_BAR_ANCHOR
 	if type(anchor) == "string" then
-		anchor = SCM.Utils.GetAnchorFrame(anchor)
+		anchor = Utils.GetActiveAnchorFrame(anchor)
 	end
 
 	if anchor then
@@ -1021,8 +1018,9 @@ function SCMResourceBarControllerMixin:ApplyFrameWidthOptions(bar)
 		bar:SetWidth(desiredWidth)
 		local widthChanged = previousWidth ~= (bar:GetWidth() or 0)
 
-		if not bar.SCMResourceBarHook then
-			bar.SCMResourceBarHook = true
+		bar.SCMResourceBarHooks = bar.SCMResourceBarHooks or {}
+		if not bar.SCMResourceBarHooks[anchor] then
+			bar.SCMResourceBarHooks[anchor] = true
 			anchor:HookScript("OnSizeChanged", function()
 				local barOptions = bar.barOptions
 				if not bar:IsProtected() and barOptions and barOptions.matchAnchorWidth then
@@ -1482,6 +1480,9 @@ function SCMResourceBarControllerMixin:Initialize()
 	self:SetScript("OnAttributeChanged", self.OnAttributeChanged)
 	self:SetScript("OnEvent", self.OnEvent)
 	self:RegisterResourceBarEvents()
+	EventRegistry:RegisterCallback(ANCHOR_PROXY_SIZE_CHANGED_EVENT, function()
+		SCM:RefreshResourceBarConfig()
+	end, self)
 
 	self:RefreshResourceBars(true)
 end

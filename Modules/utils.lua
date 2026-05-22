@@ -1,6 +1,7 @@
 local SCM = select(2, ...)
 
 local Utils = SCM.Utils
+local Cache = SCM.Cache
 local COOLDOWN_CONFIG_KEY_PREFIX = "cooldown:"
 local GLOBAL_GROUP_OFFSET = 100
 local GLOBAL_BUFF_BAR_OFFSET = 200
@@ -289,6 +290,22 @@ function Utils.GetAnchorFrame(anchorFrames)
 	end
 
 	return GetSingleAnchorFrame(anchorFrames), anchorFrames
+end
+
+function Utils.GetActiveAnchorFrame(anchorFrames)
+	local anchorFrame, selectedAnchorRef = Utils.GetAnchorFrame(anchorFrames)
+	if type(selectedAnchorRef) ~= "string" or selectedAnchorRef:sub(1, 7) ~= "ANCHOR:" then
+		return anchorFrame, selectedAnchorRef
+	end
+
+	local anchorGroup = Utils.ParseAnchorString(selectedAnchorRef)
+	local state = anchorGroup and Cache.cachedAnchorStates[anchorGroup]
+	local proxy = state and state.currentProxyActive and state.currentProxyFrame
+	if proxy and proxy:IsShown() then
+		return proxy, selectedAnchorRef
+	end
+
+	return anchorFrame, selectedAnchorRef
 end
 
 function Utils.GetPairedSource(sourceIndex)

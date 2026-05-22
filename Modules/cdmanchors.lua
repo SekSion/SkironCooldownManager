@@ -4,6 +4,8 @@ local LibCustomGlow = LibStub("LibCustomGlow-1.0")
 local Cache = SCM.Cache
 local Utils = SCM.Utils
 
+local ANCHOR_PROXY_SIZE_CHANGED_EVENT = "SkironCooldownManager.AnchorProxy.SizeChanged"
+
 local PIVOT_MAP = {
 	LEFT = {
 		TOP = "TOPRIGHT",
@@ -112,6 +114,12 @@ local function RemoveProxy(state)
 	end
 end
 
+local function OnProxySizeChanged(proxy, width, height)
+	if proxy.SCMProxyGroup then
+		EventRegistry:TriggerEvent(ANCHOR_PROXY_SIZE_CHANGED_EVENT, proxy.SCMProxyGroup, proxy, width, height)
+	end
+end
+
 local function GetProxy(group)
 	local state = GetAnchorState(group)
 	local proxy = state.currentProxyFrame
@@ -119,6 +127,8 @@ local function GetProxy(group)
 	if not proxy and not InCombatLockdown() then
 		proxy = CreateFrame("Frame", "SCM_GroupAnchorProxy_" .. group, UIParent)
 		proxy:Hide()
+		proxy.SCMProxyGroup = group
+		proxy:HookScript("OnSizeChanged", OnProxySizeChanged)
 		state.currentProxyFrame = proxy
 	end
 
