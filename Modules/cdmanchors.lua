@@ -48,6 +48,8 @@ local function GetAnchorState(group)
 end
 
 local function OnChildSetPoint(child)
+	if child.SCMSetPoint then return end
+
 	local cooldownID = not child.SCMCustom and child:GetCooldownID()
 	local anchorData = cooldownID and anchorDataByCooldownID[cooldownID] or not cooldownID and child.SCMAnchorData
 	local anchorFrame = anchorData and anchorData[2]
@@ -57,7 +59,10 @@ local function OnChildSetPoint(child)
 
 	child.SCMAnchorFrame = anchorFrame
 	anchorFrame.ClearAllPoints(child)
-	anchorFrame.SetPoint(child, anchorData[1], anchorFrame, anchorData[3], SCM:PixelPerfect(anchorData[4]), SCM:PixelPerfect(anchorData[5]))
+
+	child.SCMSetPoint = true
+	child:SetPoint(anchorData[1], anchorFrame, anchorData[3], anchorData[4], anchorData[5])
+	child.SCMSetPoint = nil
 end
 
 function SCM:GetAnchorPivot(point, growDir)
