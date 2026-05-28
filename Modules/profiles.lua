@@ -64,6 +64,15 @@ local function GetProfileExportData(db, exportType, classFileName, specID)
 	end
 
 	if exportType == EXPORT_TYPE_ALL then
+		if classFileName and classFileName ~= "ALL" and specID then
+			local classData = db[classFileName]
+			return {
+				[classFileName] = {
+					[specID] = type(classData) == "table" and type(classData[specID]) == "table" and CopyValue(classData[specID]) or {},
+				},
+			}
+		end
+
 		local profileData = {}
 		for key, value in pairs(db) do
 			if key ~= "options" and key ~= "anchorConfig" and key ~= "globalAnchorConfig" and key ~= "globalCustomConfig" then
@@ -118,12 +127,10 @@ end
 
 function SCM:ExportProfile(classFileName, specID, exportOptions)
 	exportOptions = exportOptions or {}
-	if specID and (exportOptions.includeResourceBar or exportOptions.includeCastBar or exportOptions.includeGlobalSettings or exportOptions.includeGlobalAnchors) then
-		specID = nil
-	end
+	local hasIncludeOptions = exportOptions.includeResourceBar or exportOptions.includeCastBar or exportOptions.includeGlobalSettings or exportOptions.includeGlobalAnchors
 
 	local exportType = specID or EXPORT_TYPE_ALL
-	if classFileName == "ALL" then
+	if classFileName == "ALL" or (specID and hasIncludeOptions) then
 		exportType = EXPORT_TYPE_ALL
 	elseif classFileName and not specID then
 		exportType = EXPORT_TYPE_CLASS
@@ -269,7 +276,7 @@ function SCM:ImportProfile(profileName, importString)
 	end
 
 	if typeID == EXPORT_TYPE_GLOBAL_ANCHORS then
-		self:ImportGlobalAnchorsFromData(data)
+		self:ImportGlobalAnchorsFromData(data, true)
 		return
 	end
 
@@ -347,10 +354,9 @@ function SCM:ImportProfile(profileName, importString)
 
 	self.db.profile.options = options
 
-	self.db:RegisterDefaults(SCM.DefaultDB)
 	SCM.appliedOptions = nil
-	SCM:UpdateDB()
 	SCM:ApplyOptions()
+	SCM.db:RegisterDefaults(SCM.DefaultDB)
 
 	SCM.RefreshCooldownViewerData(true)
 end
@@ -363,7 +369,7 @@ function SCM:ImportGlobalAnchors(importString)
 	self:ImportProfile(nil, importString)
 end
 
-function SCM:ImportGlobalAnchorsFromData(data)
+function SCM:ImportGlobalAnchorsFromData(data, refreshData)
 	local previousAnchorCount = #self.db.profile.globalAnchorConfig
 	local anchors, customConfig = GetImportedGlobalAnchorData(data)
 
@@ -389,7 +395,9 @@ function SCM:ImportGlobalAnchorsFromData(data)
 		end
 	end
 
-	SCM.RefreshCooldownViewerData(true)
+	if refreshData then
+		SCM.RefreshCooldownViewerData(true)
+	end
 end
 
 function SCM:ImportGlobalSettingsFromData(data)

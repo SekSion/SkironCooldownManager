@@ -213,7 +213,7 @@ local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, 
 	local secondaryGrowDir = anchorConfig.secondaryGrow or "DOWN"
 	local baseSpacing = anchorConfig.spacing or 0
 	local point, anchor, relativePoint, xOffset, yOffset = unpack(anchorConfig and anchorConfig.anchor or DEFAULT_ANCHOR)
-	local initialWidth = rowConfig[1].iconWidth or rowConfig[1].size or 47
+	local initialWidth = (rowConfig[1].useFixedWidth and rowConfig[1].fixedWidth) or rowConfig[1].iconWidth or rowConfig[1].size or 47
 	local initialHeight = rowConfig[1].iconHeight or rowConfig[1].size or 47
 	local isCentered = growDir == "CENTER" or growDir == "CENTERED"
 	local isFixed = growDir == "FIXED"
@@ -246,10 +246,12 @@ local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, 
 	local visibleChildCount = #visibleChildren
 	local configuredChildCount = configuredChildren and #configuredChildren or 0
 	local layoutSignature = visibleChildCount
+	local hasChangedChild = false
 
 	table.sort(visibleChildren, SortBySCMOrder)
 	for index = 1, visibleChildCount do
 		local child = visibleChildren[index]
+		hasChangedChild = hasChangedChild or child.SCMChanged
 		local cooldownID = child.SCMCooldownID
 		local cooldownSignature = tonumber(cooldownID) or 0
 		if cooldownSignature == 0 and cooldownID then
@@ -274,7 +276,7 @@ local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, 
 	totalChildren = layoutChildCount
 	layoutSignature = layoutSignature + (configuredChildCount * 31) + (layoutChildCount * 131) + (lockGroupSize and 8191 or 0)
 
-	if allowLayoutSkip and not checkDuplicates and not resetSize and not SCM.isOptionsOpen and state.layoutSignature == layoutSignature then
+	if allowLayoutSkip and not hasChangedChild and not checkDuplicates and not resetSize and not SCM.isOptionsOpen and state.layoutSignature == layoutSignature then
 		return
 	end
 
@@ -420,7 +422,8 @@ local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, 
 		state.appliedAnchorOffsetY = anchorOffsetY
 	end
 
-	local childAnchor, useProxyAnchor = SCM:GetManagedAnchorChildAnchor(group, groupAnchor, point, anchor, relativePoint, xOffset, yOffset, growDir, firstRowWidth, effectiveWidth, effectiveHeight, anchorOffsetY, lockGroupSize)
+	local childAnchor, useProxyAnchor =
+		SCM:GetManagedAnchorChildAnchor(group, groupAnchor, point, anchor, relativePoint, xOffset, yOffset, growDir, firstRowWidth, effectiveWidth, effectiveHeight, anchorOffsetY, lockGroupSize)
 	local anchorOffsetChanged = SCM:UpdateAnchorOffset(group, true)
 	if useProxyAnchor and changedGroups and anchorOffsetChanged then
 		changedGroups[group] = true
@@ -457,6 +460,7 @@ local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, 
 			else
 				SCM:SkinBuffBar(child, child.SCMConfig)
 			end
+			child.SCMChanged = false
 
 			if checkDuplicates then
 				local duplicateChild = child.SCMLayoutNextDuplicate
@@ -479,6 +483,7 @@ local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, 
 					else
 						SCM:SkinBuffBar(child, child.SCMConfig)
 					end
+					child.SCMChanged = false
 
 					duplicateChild = child.SCMLayoutNextDuplicate
 					child.SCMLayoutNextDuplicate = nil
@@ -515,7 +520,7 @@ local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, 
 	end
 
 	if not InCombatLockdown() and groupAnchor then
-		groupAnchor:SetSize(SCM:PixelPerfect(effectiveWidth), SCM:PixelPerfect(effectiveHeight))
+		groupAnchor:SetSize(effectiveWidth, effectiveHeight)
 		state.appliedWidth = effectiveWidth
 		state.appliedHeight = effectiveHeight
 		state.appliedAnchorOffsetY = anchorOffsetY
@@ -680,16 +685,7 @@ local function OrderCDManagerSpells_Actual(updateScope, scopedAnchorGroupsOverri
 	local allowLayoutSkip = scopedAnchorGroups and updateScope ~= UPDATE_SCOPE.BUFF_BAR
 	wipe(Cache.cachedVisitedAnchorGroups)
 	for group, visibleChildren in pairs(Cache.cachedCooldownFrameTbl) do
-		LayoutAnchorGroup(
-			group,
-			visibleChildren,
-			Utils.GetAnchorConfigForLayoutGroup(config, group),
-			options,
-			changedGroups,
-			nil,
-			updateScope == UPDATE_SCOPE.BUFF,
-			allowLayoutSkip
-		)
+		LayoutAnchorGroup(group, visibleChildren, Utils.GetAnchorConfigForLayoutGroup(config, group), options, changedGroups, nil, updateScope == UPDATE_SCOPE.BUFF, allowLayoutSkip)
 	end
 
 	if not isFullBuffBarUpdate then

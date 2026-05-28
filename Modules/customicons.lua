@@ -61,8 +61,12 @@ local function ResetCustomIconFrame(_, frame)
 	frame.Icon:SetVertexColor(1, 1, 1, 1)
 	frame.Icon:SetDesaturated(false)
 	frame.Icon:SetTexture(nil)
+	frame.Icon:SetTexelSnappingBias(0)
+	frame.Icon:SetSnapToPixelGrid(false)
 	frame.CraftQuality:Hide()
 	frame.CraftQuality:SetTexture(nil)
+	frame.CraftQuality:SetTexelSnappingBias(0)
+	frame.CraftQuality:SetSnapToPixelGrid(false)
 	frame.Cooldown:Clear()
 	frame.Cooldown:SetReverse(false)
 	frame.GCDCooldown:Clear()
@@ -142,6 +146,12 @@ local function AcquireCustomIconFrame(customFrames, id)
 		frame.Cooldown:SetScript("OnCooldownDone", OnIconCooldownDone)
 		frame.GCDCooldown:SetScript("OnCooldownDone", OnIconCooldownDone)
 		frame.Cooldown:SetCountdownFont("GameFontHighlightHugeOutline")
+		frame.Icon:SetTexelSnappingBias(0)
+		frame.Icon:SetSnapToPixelGrid(false)
+		frame.CraftQuality:SetTexelSnappingBias(0)
+		frame.CraftQuality:SetSnapToPixelGrid(false)
+		frame.OutOfRange:SetTexelSnappingBias(0)
+		frame.OutOfRange:SetSnapToPixelGrid(false)
 		frame:HookScript("OnShow", OnCustomIconShow)
 		frame.SCMCustomIconInitialized = true
 	end
@@ -240,6 +250,8 @@ local function UpdateCustomIconCraftQuality(frame, iconType, config)
 	local craftQuality = frame.CraftQuality
 	craftQuality:Hide()
 	craftQuality:SetTexture(nil)
+	craftQuality:SetTexelSnappingBias(0)
+	craftQuality:SetSnapToPixelGrid(false)
 
 	if iconType ~= "item" or not config.showCraftQuality then
 		return
@@ -484,6 +496,50 @@ function CustomIcons.UpdateSpellUses(spellID, baseSpellID)
 	end
 end
 
+function CustomIcons.UpdateSpellGlow(spellID, event)
+	local entriesBySpellID = Cache.cachedCustomSpellEntriesBySpellID[spellID]
+
+	if not entriesBySpellID then
+		for baseSpellID, entries in pairs(Cache.cachedCustomSpellEntriesBySpellID) do
+			if C_Spell.GetOverrideSpell(baseSpellID) == spellID then
+				entriesBySpellID = entries
+			end
+		end
+
+		if not entriesBySpellID then
+			return
+		end
+	end
+
+	for i = 1, #entriesBySpellID do
+		local entry = entriesBySpellID[i]
+		local frame = CustomSpellFrames[entry.id]
+		if frame and not frame.SCMReleased then
+			if event == "SHOW" then
+				SCM:StartCustomGlow(frame)
+			else
+				SCM:StopCustomGlow(frame)
+			end
+		end
+	end
+end
+
+function CustomIcons.UpdateItemCountForItemID(itemID)
+	local entriesByItemID = Cache.cachedCustomItemEntriesByItemID[itemID]
+
+	if not entriesByItemID then
+		return
+	end
+
+	for i = 1, #entriesByItemID do
+		local entry = entriesByItemID[i]
+		local frame = CustomItemFrames[entry.id]
+		if frame and not frame.SCMReleased then
+			SetCustomIconCountText(frame, frame.SCMIconType, entry.config)
+		end
+	end
+end
+
 local function DoesItemOrSpellExists(config)
 	local iconType = GetIconType(config)
 	if iconType == "empty" then
@@ -560,8 +616,13 @@ local function ShouldLoadCustomIcon(config)
 		return false
 	end
 
-	if config.useSpellKnown and (not config.spellKnownSpellID or type(config.spellKnownSpellID) ~= "number" or not C_SpellBook.IsSpellKnown(config.spellKnownSpellID)) then
-		return false
+	if config.useSpellKnown or config.useSpellKnown == nil then
+		if not config.spellKnownSpellID or type(config.spellKnownSpellID) ~= "number" then
+			return true
+		end
+
+		local isSpellKnown = C_SpellBook.IsSpellKnown(config.spellKnownSpellID)
+		return (config.useSpellKnown and isSpellKnown) or (config.useSpellKnown == nil and not isSpellKnown)
 	end
 
 	return true
@@ -616,13 +677,6 @@ local function ConfigureCustomIconFrame(frame, id, config, viewerScale, anchorGr
 	frame.SCMGlobal = isGlobal and true or nil
 	frame.SCMCustom = true
 
-	if frame.SCMIconType == "empty" then
-		frame:SetBackdrop(nil)
-	else
-		frame:SetBackdrop(frame.backdropInfo)
-		frame:SetBackdropBorderColor(frame.backdropBorderColor:GetRGBA())
-	end
-
 	if frame.SCMIconType == "item" then
 		SetCustomItemID(frame, config)
 	elseif config.slotID then
@@ -646,6 +700,8 @@ local function UpdateCustomIconFrameState(frame, config)
 
 	frame.SCMIconTexture = iconTexture
 	frame.Icon:SetTexture(iconTexture)
+	frame.Icon:SetTexelSnappingBias(0)
+	frame.Icon:SetSnapToPixelGrid(false)
 	frame.UpdateCooldown = UpdateCustomIconCooldown
 	frame.UpdateCharges = nil
 	UpdateCustomIconCraftQuality(frame, iconType, config)
@@ -847,7 +903,7 @@ local function CreateCustomIcon(id, config, isGlobal, skipExisting)
 			return
 		end
 
-		if DoesItemOrSpellExists(config) and ShouldLoadCustomIcon(config) then
+		if DoesItemOrSpellExists(config) and (not isGlobal or ShouldLoadCustomIcon(config)) then
 			local frame = AcquireCustomIconFrame(customFrames, id)
 			ConfigureCustomIconFrame(frame, id, config, 1, config.anchorGroup or 1, isGlobal)
 			UpdateCustomIconFrameState(frame, config)
@@ -910,8 +966,8 @@ local function ProcessCustomIcon(id, config, validChildren)
 		return
 	end
 
-	if customFrames[id] and DoesItemOrSpellExists(config) and ShouldLoadCustomIcon(config) then
-		local frame = customFrames[id]
+	local frame = customFrames[id]
+	if frame and DoesItemOrSpellExists(config) and (not frame.SCMGlobal or ShouldLoadCustomIcon(config)) then
 		local iconType = frame.SCMIconType
 		if iconType == "empty" then
 			Icons.SetChildVisibilityState(frame, true, true)
@@ -929,6 +985,8 @@ local function ProcessCustomIcon(id, config, validChildren)
 			if frame.SCMIconTexture ~= iconTexture then
 				frame.SCMIconTexture = iconTexture
 				frame.Icon:SetTexture(iconTexture)
+				frame.Icon:SetTexelSnappingBias(0)
+				frame.Icon:SetSnapToPixelGrid(false)
 				UpdateCustomIconCraftQuality(frame, iconType, config)
 			end
 			local hasCount = SetCustomIconCountText(frame, iconType, config)

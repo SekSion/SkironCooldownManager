@@ -243,7 +243,7 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 		skinningSettings:AddChild(savePosition)
 
 		local menuScale = AceGUI:Create("Slider")
-		menuScale:SetRelativeWidth(1)
+		menuScale:SetRelativeWidth(0.5)
 		menuScale:SetLabel("Options Scale")
 		menuScale:SetSliderValues(0.5, 2, 0.1)
 		menuScale:SetValue(options.menuScale)
@@ -252,6 +252,17 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 			LibWindow.SetScale(SCM.OptionsFrame.frame, value)
 		end)
 		skinningSettings:AddChild(menuScale)
+
+		local resetPosition = AceGUI:Create("Button")
+		resetPosition:SetRelativeWidth(0.5)
+		resetPosition:SetText("Reset Position")
+		resetPosition:SetCallback("OnClick", function()
+			options.optionsWindow.x = 0
+			options.optionsWindow.y = 0
+			options.optionsWindow.point = "CENTER"
+			LibWindow.RestorePosition(SCM.OptionsFrame.frame)
+		end)
+		skinningSettings:AddChild(resetPosition)
 
 		local visibilitySettings = AceGUI:Create("InlineGroup")
 		visibilitySettings:SetLayout("flow")
@@ -486,7 +497,7 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 		iconZoom:SetRelativeWidth(0.25)
 		iconZoom:SetValue(options.iconZoom or 1)
 		iconZoom:SetLabel("Zoom")
-		iconZoom:SetSliderValues(0.01, 0.4, 0.01)
+		iconZoom:SetSliderValues(-0.1, 0.4, 0.01)
 		iconZoom:SetIsPercent(true)
 		iconZoom:SetCallback("OnValueChanged", function(self, event, value)
 			options.iconZoom = value
@@ -514,16 +525,6 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 			SCM:ApplyAllCDManagerConfigs()
 		end)
 		iconSettings:AddChild(keepIconSquareRatio)
-
-		local experimentalPixelSettings  = AceGUI:Create("CheckBox")
-		experimentalPixelSettings:SetRelativeWidth(0.25)
-		experimentalPixelSettings:SetLabel("Experimental Skinning")
-		experimentalPixelSettings:SetValue(options.experimentalPixelSettings)
-		experimentalPixelSettings:SetCallback("OnValueChanged", function(_, _, value)
-			options.experimentalPixelSettings = value
-			SCM:ApplyAllCDManagerConfigs()
-		end)
-		iconSettings:AddChild(experimentalPixelSettings)
 
 		local borderSettings = AceGUI:Create("InlineGroup")
 		borderSettings:SetLayout("flow")
@@ -839,7 +840,7 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 				selectedBreakpoint.rounding = styleSettings.rounding
 
 				if selectedBreakpoint.color then
-					selectedBreakpoint.format = CreateColor(unpack(selectedBreakpoint.color)):WrapTextInColorCode(C_StringUtil.StripHyperlinks(selectedBreakpoint.format))
+					selectedBreakpoint.format = CreateColor(unpack(selectedBreakpoint.color)):WrapTextInColorCode(C_StringUtil.StripHyperlinks(styleSettings.format))
 				else
 					selectedBreakpoint.format = styleSettings.format
 				end

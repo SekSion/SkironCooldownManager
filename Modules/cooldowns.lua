@@ -27,8 +27,11 @@ local function OnBuffCooldownSet(self)
 		return
 	end
 
-	if parent.auraInstanceID and (not parent.SCMAuraInstanceID or parent.auraInstanceID ~= parent.SCMAuraInstanceID) then
+	if parent.auraInstanceID and (not parent.SCMAuraInstanceID or parent.auraInstanceID ~= parent.SCMAuraInstanceID) and parent.auraDataUnit == "player" then
 		parent.SCMAuraInstanceID = parent.auraInstanceID
+		parent.SCMAuraDataUnit = parent.auraDataUnit or parent.SCMAuraDataunit
+	elseif parent.SCMUseFixedDuration then
+		parent.SCMFixedDuration = parent.SCMFixedDuration or GetTime() + Constants.FakeAuras[parent.SCMSpellID]
 	end
 
 	if not parent.SCMHidden or parent.SCMConfig.alwaysShow then
@@ -54,12 +57,18 @@ local function OnBuffCooldownEnd(self)
 	end
 
 	if parent.SCMAuraInstanceID and not parent.SCMCheckCooldownFrame then
-		if not C_UnitAuras.GetAuraDataByAuraInstanceID("player", parent.SCMAuraInstanceID) then
-			parent.SCMAuraInstanceID = nil
-		else
+		local auraData = C_UnitAuras.GetAuraDataByAuraInstanceID(parent.SCMAuraDataUnit, parent.SCMAuraInstanceID)
+		if auraData and auraData.isFromPlayerOrPlayerPet then
 			return
+		else
+			parent.SCMAuraInstanceID = nil
+			parent.SCMAuraDataUnit = nil
 		end
+	elseif parent.SCMFixedDuration and GetTime() < parent.SCMFixedDuration then
+		return
 	end
+
+	parent.SCMFixedDuration = nil
 
 	Icons.UpdateChildGlow(parent, true)
 
@@ -71,13 +80,6 @@ local function OnBuffCooldownEnd(self)
 	--local options = parent.SCMBuffOptions
 	if not parent.SCMHidden or (parent.SCMHidden and parent.SCMConfig.showWhileInactive) then
 		SCM:ApplyAnchorGroupCDManagerConfig(parent.SCMGroup, nil, parent.viewerFrame and parent.viewerFrame.SCMUpdateScope)
-	end
-end
-
-local function OnBuffTriggerPandemicAlert(self)
-	local options = self.SCMBuffOptions or self.SCMIconOptions
-	if options and options.pandemicGlowOption ~= "keepPandemicGlow" and not self.SCMPandemic then
-		self.SCMPandemic = true
 	end
 end
 
@@ -93,8 +95,9 @@ local function OnBuffShowPandemicStateFrame(self)
 
 	self.PandemicIcon:SetAlpha(0)
 
-	if options.pandemicGlowOption == "replacePandemicGlow" then
-		SCM:StartCustomGlow(self.Icon)
+	if not self.SCMGlow and options.pandemicGlowOption == "replacePandemicGlow" then
+		self.SCMPandemic = true
+		SCM:StartCustomGlow(self)
 	end
 end
 
@@ -104,14 +107,15 @@ local function OnBuffHidePandemicStateFrame(self)
 		return
 	end
 
-	if self.SCMPandemic and options.pandemicGlowOption == "replacePandemicGlow" then
-		SCM:StopCustomGlow(self.Icon)
+	if self.SCMPandemic and self.SCMGlow and options.pandemicGlowOption == "replacePandemicGlow" then
+		SCM:StopCustomGlow(self)
 		self.SCMPandemic = nil
 	end
 end
 
 function Cooldowns.SetupBuffIconHooks(child, options)
-	if child.SCMShowHook and (not Constants.FakeAuras[child.SCMSpellID] or child.SCMCheckCooldownFrame) then
+	local checkCooldownFrame = Constants.FakeAuras[child.SCMSpellID] or Constants.TargetAuras[child.SCMSpellID]
+	if (checkCooldownFrame and child.SCMCooldownHooked) or (not checkCooldownFrame and child.SCMAuraHooked) then
 		return
 	end
 
@@ -119,7 +123,7 @@ function Cooldowns.SetupBuffIconHooks(child, options)
 	child.SCMBuffOptions = options
 
 	-- Cooldowns
-	if Constants.FakeAuras[child.SCMSpellID] or Constants.TargetAuras[child.SCMSpellID] then
+	if checkCooldownFrame then
 		if not child.SCMCooldownHooked then
 			hooksecurefunc(child.Cooldown, "SetCooldown", OnBuffCooldownSet)
 			hooksecurefunc(child.Cooldown, "Clear", OnBuffCooldownEnd)
@@ -128,6 +132,7 @@ function Cooldowns.SetupBuffIconHooks(child, options)
 		end
 
 		child.SCMCheckCooldownFrame = true
+		child.SCMUseFixedDuration = type(Constants.FakeAuras[child.SCMSpellID]) == "number"
 	else
 		if not child.SCMAuraHooked then
 			hooksecurefunc(child, "OnAuraInstanceInfoSet", OnBuffCooldownSet)
@@ -136,11 +141,12 @@ function Cooldowns.SetupBuffIconHooks(child, options)
 		end
 
 		child.SCMCheckCooldownFrame = nil
+		child.SCMUseFixedDuration = nil
 	end
 
 	-- Pandmic Alerts
 	if not child.SCMPandemicHooked then
-		hooksecurefunc(child, "TriggerPandemicAlert", OnBuffTriggerPandemicAlert)
+		--hooksecurefunc(child, "TriggerPandemicAlert", OnBuffTriggerPandemicAlert)
 		hooksecurefunc(child, "ShowPandemicStateFrame", OnBuffShowPandemicStateFrame)
 		hooksecurefunc(child, "HidePandemicStateFrame", OnBuffHidePandemicStateFrame)
 		child.SCMPandemicHooked = true
@@ -153,7 +159,12 @@ function Cooldowns.IsChildOnCooldown(child)
 	end
 
 	local spellCooldownInfo = C_Spell.GetSpellCooldown(child.SCMSpellID)
-	return spellCooldownInfo and spellCooldownInfo.isActive and not spellCooldownInfo.isOnGCD
+	local isOnCooldown = spellCooldownInfo and spellCooldownInfo.isActive and not spellCooldownInfo.isOnGCD
+	if Constants.CheckCooldownFrameSpells[child.SCMSpellID] then
+		return isOnCooldown and child.Cooldown:IsVisible()
+	end
+
+	return isOnCooldown
 end
 
 function Cooldowns.SetNormalCooldown(self, parent)
@@ -281,11 +292,11 @@ function Cooldowns.SetupCooldownHooks(child)
 	child.Cooldown:HookScript("OnCooldownDone", function(self, ...)
 		local parent = self:GetParent()
 		parent.Icon.SCMDesaturated = nil
-		OnRegularCooldownChanged(self)
+		OnRegularCooldownChanged(self, "DONE")
 	end)
 	child.SCMRegularCooldownHook = true
 
-	hooksecurefunc(child, "TriggerPandemicAlert", OnBuffTriggerPandemicAlert)
+	--hooksecurefunc(child, "TriggerPandemicAlert", OnBuffTriggerPandemicAlert)
 	hooksecurefunc(child, "ShowPandemicStateFrame", OnBuffShowPandemicStateFrame)
 	hooksecurefunc(child, "HidePandemicStateFrame", OnBuffHidePandemicStateFrame)
 end

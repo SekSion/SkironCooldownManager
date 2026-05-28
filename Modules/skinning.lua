@@ -112,6 +112,50 @@ local function ApplyCooldownFont(cooldownFrame, options)
 			cooldownFontString:SetFont(unpack(originalCooldownFont))
 		end
 	end
+
+	local parent = cooldownFrame:GetParent()
+	if parent.SCMConfig then
+		cooldownFrame:SetHideCountdownNumbers(parent.SCMConfig.hideCountdownNumbers)
+	end
+end
+
+local function ApplyCooldownSwipe(cooldownFrame, options)
+	local parent = cooldownFrame:GetParent()
+	local forceActiveSwipe = parent.SCMConfig and parent.SCMConfig.forceActiveSwipe
+
+	if parent.auraInstanceID or parent.SCMFakeAuraInstanceID or parent.SCMBuffOptions then
+		if options.disableRegularIconActiveSwipe and not forceActiveSwipe then
+			if options.recolorNormalSwipe then
+				cooldownFrame:SetSwipeColor(unpack(options.normalSwipeColor))
+			else
+				cooldownFrame:SetSwipeColor(0, 0, 0, 0.7)
+			end
+
+			if parent.SCMBuffOptions then
+				cooldownFrame:SetReverse(options.reverseActiveSwipe)
+			end
+		else
+			if options.recolorActiveSwipe then
+				cooldownFrame:SetSwipeColor(unpack(options.activeSwipeColor))
+			end
+
+			cooldownFrame:SetReverse(options.reverseActiveSwipe)
+		end
+	elseif options.recolorNormalSwipe then
+		cooldownFrame:SetSwipeColor(unpack(options.normalSwipeColor))
+		cooldownFrame:SetReverse(false)
+	else
+		cooldownFrame:SetSwipeColor(0, 0, 0, 0.7)
+	end
+end
+
+local function OnSetCooldown(self)
+	local options = SCM.db.profile.options
+
+	SCM.Cooldowns.ApplyNumericRuleFormatter(self)
+
+	ApplyCooldownSwipe(self, options)
+	ApplyCooldownFont(self, options)
 end
 
 local function ApplyCooldownStyle(child, options)
@@ -126,55 +170,23 @@ local function ApplyCooldownStyle(child, options)
 			child.CooldownFlash:SetAlpha(0)
 		end
 
-		cooldownFrame:ClearAllPoints()
-		cooldownFrame:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -0)
-		cooldownFrame:SetPoint("BOTTOMRIGHT", child, "BOTTOMRIGHT", -0, 0)
+		-- cooldownFrame:ClearAllPoints()
+		-- cooldownFrame:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -0)
+		cooldownFrame:SetPoint("BOTTOMRIGHT", child, "BOTTOMRIGHT", -SCM:PixelPerfect(), SCM:PixelPerfect())
 		cooldownFrame:SetSwipeTexture("Interface\\Buttons\\WHITE8x8")
 
-		hooksecurefunc(cooldownFrame, "SetCooldown", function(self)
-			local options = SCM.db.profile.options
-			local parent = self:GetParent()
-			local forceActiveSwipe = parent.SCMConfig and parent.SCMConfig.forceActiveSwipe
-
-			SCM.Cooldowns.ApplyNumericRuleFormatter(self)
-
-			if parent.auraInstanceID or parent.SCMFakeAuraInstanceID or parent.SCMBuffOptions then
-				if options.disableRegularIconActiveSwipe and not forceActiveSwipe then
-					if options.recolorNormalSwipe then
-						self:SetSwipeColor(unpack(options.normalSwipeColor))
-					else
-						self:SetSwipeColor(0, 0, 0, 0.7)
-					end
-
-					if parent.SCMBuffOptions then
-						self:SetReverse(options.reverseActiveSwipe)
-					end
-				else
-					if options.recolorActiveSwipe then
-						self:SetSwipeColor(unpack(options.activeSwipeColor))
-					end
-
-					self:SetReverse(options.reverseActiveSwipe)
-				end
-			elseif options.recolorNormalSwipe then
-				self:SetSwipeColor(unpack(options.normalSwipeColor))
-				self:SetReverse(false)
-			else
-				self:SetSwipeColor(0, 0, 0, 0.7)
-			end
-			ApplyCooldownFont(self, options)
-		end)
-
-		ApplyCooldownFont(cooldownFrame, options)
+		hooksecurefunc(cooldownFrame, "SetCooldown", OnSetCooldown)
+		OnSetCooldown(cooldownFrame)
 	end
 end
 
 local function ApplyZoomSettings(child, options)
-	local iconZoom = options.experimentalPixelSettings and options.iconZoom or SCM:PixelPerfect(options.iconZoom)
+	local iconZoom = options.iconZoom
 
 	if options.keepIconSquareRatio and child.SCMWidth and child.SCMHeight then
-		local xCrop = 1 - iconZoom
-		local yCrop = 1 - iconZoom
+		local baseCrop = 1 - (iconZoom * 2)
+		local xCrop = baseCrop
+		local yCrop = baseCrop
 		local ratio = child.SCMWidth / child.SCMHeight
 
 		if ratio > 1 then
@@ -201,7 +213,7 @@ function SCM:SkinChild(child, childConfig)
 		return
 	end
 
-	if not options.enableSkinning then
+	if not options.enableSkinning or child.SCMIconType == "empty" then
 		return
 	end
 
@@ -210,18 +222,11 @@ function SCM:SkinChild(child, childConfig)
 		child:SetFrameStrata(frameStrata)
 	end
 
-	local borderSize = options.experimentalPixelSettings and options.borderSize or SCM:PixelPerfect(options.borderSize)
-	if child.SCMCustom and child.SCMIconType == "empty" then
-		borderSize = 0
-	end
-
+	local borderSize = options.borderSize
 	local borderColor = options.borderColor
 
 	if not child.SCMSkinned or (child.SCMSkinned and self.OptionsFrame ~= nil and self.OptionsFrame:IsShown()) then
 		child.SCMSkinned = true
-
-		child.Cooldown:ClearAllPoints()
-		child.Cooldown:SetAllPoints(child)
 
 		child.customBorder = child.customBorder or CreateFrame("Frame", nil, child, "BackdropTemplate")
 		child.customBorder:SetFrameLevel(child:GetFrameLevel() + 1)
@@ -238,20 +243,18 @@ function SCM:SkinChild(child, childConfig)
 			child.customBorder:Show()
 		end
 
-		if options.experimentalPixelSettings then
-			for _, region in ipairs({ child.customBorder:GetRegions() }) do
-				region:SetTexelSnappingBias(0)
-				region:SetSnapToPixelGrid(false)
-			end
-		else
-			for _, region in ipairs({ child.customBorder:GetRegions() }) do
-				region:SetTexelSnappingBias(1)
-				region:SetSnapToPixelGrid(true)
-			end
+		for _, region in ipairs({ child.customBorder:GetRegions() }) do
+			region:SetTexelSnappingBias(0)
+			region:SetSnapToPixelGrid(false)
 		end
 
 		local textureRegion
 		for _, region in ipairs({ child:GetRegions() }) do
+			if region:IsObjectType("Texture") then
+				region:SetTexelSnappingBias(0)
+				region:SetSnapToPixelGrid(false)
+			end
+
 			if region.GetMaskTexture and region:GetMaskTexture(1) then
 				region:RemoveMaskTexture(region:GetMaskTexture(1))
 			elseif region:IsObjectType("Texture") and region.GetAtlas and region:GetAtlas() == "UI-HUD-CoolDownManager-IconOverlay" then
@@ -262,29 +265,12 @@ function SCM:SkinChild(child, childConfig)
 
 		if childConfig and childConfig.customIcon and textureRegion then
 			child.Icon:SetTexture(childConfig.customIcon)
-
-			if not child.SCMIconTextureHook then
-				child.SCMIconTextureHook = true
-				hooksecurefunc(child.Icon, "SetTexture", function(self)
-					local config = self:GetParent().SCMConfig
-					if config and config.customIcon then
-						textureRegion.SetTexture(self, config.customIcon)
-					end
-				end)
-			end
-		end
-
-		child.Icon:ClearAllPoints()
-		child.Icon:SetPoint("TOPLEFT", child, "TOPLEFT", borderSize, -borderSize)
-		child.Icon:SetPoint("BOTTOMRIGHT", child, "BOTTOMRIGHT", -borderSize, borderSize)
-
-		if options.experimentalPixelSettings then
 			child.Icon:SetTexelSnappingBias(0)
 			child.Icon:SetSnapToPixelGrid(false)
-		else
-			child.Icon:SetTexelSnappingBias(1)
-			child.Icon:SetSnapToPixelGrid(true)
 		end
+
+		child.Icon:SetTexelSnappingBias(0)
+		child.Icon:SetSnapToPixelGrid(false)
 
 		if child.DebuffBorder then
 			child.DebuffBorder:SetAlpha(0)
@@ -310,7 +296,7 @@ function SCM:SkinBuffBar(child, config)
 	end
 
 	local buffBarOptions = options.buffBarOptions
-	local borderSize = SCM:PixelPerfect() * buffBarOptions.borderSize
+	local borderSize = buffBarOptions.borderSize
 	local borderColor = buffBarOptions.borderColor
 	local backgroundColor = buffBarOptions.backgroundColor
 	local foregroundColor = buffBarOptions.foregroundColor
@@ -337,10 +323,14 @@ function SCM:SkinBuffBar(child, config)
 		local statusBarTexture = bar:GetStatusBarTexture()
 		if statusBarTexture then
 			statusBarTexture:SetTexture(LSM:Fetch("statusbar", buffBarOptions.barTexture))
+			statusBarTexture:SetTexelSnappingBias(0)
+			statusBarTexture:SetSnapToPixelGrid(false)
 		end
 
 		for _, region in ipairs({ bar:GetRegions() }) do
 			if region:IsObjectType("Texture") then
+				region:SetTexelSnappingBias(0)
+				region:SetSnapToPixelGrid(false)
 				--if region:GetAtlas() == "UI-HUD-CoolDownManager-Bar-Pip" or region:GetAtlas() == "UI-HUD-CoolDownManager-Bar-BG" then
 				if region:GetAtlas() == "UI-HUD-CoolDownManager-Bar-Pip" then
 					region:Hide()
@@ -362,6 +352,8 @@ function SCM:SkinBuffBar(child, config)
 		bar.BarBG:SetPoint("BOTTOMLEFT", iconFrame, "BOTTOMRIGHT", -borderSize, 0)
 		bar.BarBG:SetPoint("RIGHT", bar, "RIGHT", 0, 0)
 		bar.BarBG:SetColorTexture(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a)
+		bar.BarBG:SetTexelSnappingBias(0)
+		bar.BarBG:SetSnapToPixelGrid(false)
 		local fontOutline = buffBarOptions.fontOutline or "OUTLINE"
 		bar.Name:SetFont(LSM:Fetch("font", buffBarOptions.font), buffBarOptions.fontSize, fontOutline)
 		bar.Duration:SetFont(LSM:Fetch("font", buffBarOptions.font), buffBarOptions.fontSize, fontOutline)
@@ -381,10 +373,17 @@ function SCM:SkinBuffBar(child, config)
 			bar.customBorder:Show()
 		end
 
+		for _, region in ipairs({ bar.customBorder:GetRegions() }) do
+			region:SetTexelSnappingBias(0)
+			region:SetSnapToPixelGrid(false)
+		end
+
 		iconFrame.Icon:ClearAllPoints()
 		iconFrame.Icon:SetPoint("TOPLEFT", iconFrame, "TOPLEFT", borderSize, -borderSize)
 		iconFrame.Icon:SetPoint("BOTTOMRIGHT", iconFrame, "BOTTOMRIGHT", -borderSize, borderSize)
 		iconFrame.Icon:SetTexCoord(0.12, 0.88, 0.12, 0.88)
+		iconFrame.Icon:SetTexelSnappingBias(0)
+		iconFrame.Icon:SetSnapToPixelGrid(false)
 
 		iconFrame.customBorder = iconFrame.customBorder or CreateFrame("Frame", nil, iconFrame, "BackdropTemplate")
 		iconFrame.customBorder:SetFrameLevel(iconFrame:GetFrameLevel() + 1)
@@ -401,7 +400,17 @@ function SCM:SkinBuffBar(child, config)
 			iconFrame.customBorder:Show()
 		end
 
+		for _, region in ipairs({ iconFrame.customBorder:GetRegions() }) do
+			region:SetTexelSnappingBias(0)
+			region:SetSnapToPixelGrid(false)
+		end
+
 		for _, region in ipairs({ iconFrame:GetRegions() }) do
+			if region:IsObjectType("Texture") then
+				region:SetTexelSnappingBias(0)
+				region:SetSnapToPixelGrid(false)
+			end
+
 			if region.GetMaskTexture and region:GetMaskTexture(1) then
 				region:RemoveMaskTexture(region:GetMaskTexture(1))
 			elseif region:IsObjectType("Texture") and region.GetAtlas and region:GetAtlas() == "UI-HUD-CoolDownManager-IconOverlay" then

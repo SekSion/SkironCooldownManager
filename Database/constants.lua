@@ -315,6 +315,12 @@ Constants.SpecSecondaryPower = {
 		segmentCount = 3,
 		registerUnitAura = true,
 	},
+	[257] = {
+		resourceKind = "spellCharges",
+		spellID = 2050,
+		powerToken = "SPELL_CHARGES_SERENITY",
+		segmentCount = 2,
+	},
 	[263] = {
 		resourceKind = "maelstromWeapon",
 		powerToken = "MAELSTROM_WEAPON",
@@ -334,6 +340,12 @@ Constants.SpecSecondaryPower = {
 	[269] = {
 		powerType = Enum.PowerType.Chi,
 		powerToken = "CHI",
+	},
+	[581] = {
+		resourceKind = "vengeanceSoulFragments",
+		powerToken = "SOUL_FRAGMENTS_VENGEANCE",
+		spellID = 228477,
+		segmentCount = 6,
 	},
 	[1480] = {
 		resourceKind = "soulFragments",
@@ -375,6 +387,7 @@ Constants.FallbackPowerColorByToken = {
 	ESSENCE = { r = 0.32, g = 0.84, b = 0.90 },
 	MAELSTROM_WEAPON = { r = 0.00, g = 0.50, b = 1.00 },
 	SOUL_FRAGMENTS = { r = 0.35, g = 0.25, b = 0.73 },
+	SOUL_FRAGMENTS_VENGEANCE = { r = 0.35, g = 0.25, b = 0.73 },
 	SPELL_CHARGES_FIRE_BLAST = { r = 1.00, g = 0.34, b = 0.12 },
 	STAGGER = { r = 0.52, g = 1.00, b = 0.52 },
 }
@@ -400,9 +413,11 @@ Constants.ResourceBarPowerTypes = {
 	{ token = "STAGGER", label = "Stagger" },
 	{ token = "MAELSTROM_WEAPON", label = "Maelstrom Weapon" },
 	{ token = "SOUL_FRAGMENTS", label = "Soul Fragments (Devourer)" },
+	{ token = "SOUL_FRAGMENTS_VENGEANCE", label = "Soul Fragments (Vengeance)" },
 	{ token = "TIP_OF_THE_SPEAR", label = "Tip of the Spear" },
 	{ token = "ICICLES", label = "Icicles" },
 	{ token = "SPELL_CHARGES_FIRE_BLAST", label = "Fire Blast Charges" },
+	{ token = "SPELL_CHARGES_SERENITY", label = "Serenity Charges" },
 }
 
 Constants.DruidPrimaryPowerTypes = {
@@ -439,7 +454,9 @@ Constants.SegmentTicksByPowerToken = {
 	MAELSTROM_WEAPON = true,
 	RUNES = true,
 	SOUL_SHARDS = true,
+	SOUL_FRAGMENTS_VENGEANCE = true,
 	SPELL_CHARGES_FIRE_BLAST = true,
+	SPELL_CHARGES_SERENITY = true,
 	TIP_OF_THE_SPEAR = true,
 }
 
@@ -503,8 +520,8 @@ Constants.Races = {
 	[10] = true, -- Blood Elf
 	[11] = true, -- Draenei
 	[22] = true, -- Worgen
-	[25] = true, -- Pandaren (Alliance)
-	[26] = true, -- Pandaren (Horde)
+	[25] = 26, -- Pandaren (Alliance)
+	[26] = 25, -- Pandaren (Horde)
 	[27] = true, -- Nightborne
 	[28] = true, -- Highmountain Tauren
 	[29] = true, -- Void Elf
@@ -515,8 +532,8 @@ Constants.Races = {
 	[35] = true, -- Vulpera
 	[36] = true, -- Mag'har Orc
 	[37] = true, -- Mechagnome
-	[52] = true, -- Dracthyr (Alliance)
-	[70] = true, -- Dracthyr (Horde)
+	[52] = 70, -- Dracthyr (Alliance)
+	[70] = 52, -- Dracthyr (Horde)
 	[84] = 85, -- Earthen (Horde)
 	[85] = 84, -- Earthen (Alliance)
 	[86] = 91, -- Haranir
@@ -525,38 +542,39 @@ Constants.Races = {
 
 Constants.FakeAuras = {
 	-- WARLOCK
-	[265187] = 15, -- Summon Tyrant
+	[265187] = 15, -- Summon Tyrant 15
 	[1288950] = 23, -- Grimoire: Fel Ravager
 	[104316] = 12, -- Call Dreadstalkers
 	[1276672] = 12, -- Summon Doomguard (not even Blizzard shows that)
 
 	-- PALADIN
-	[26573] = 12, -- Consecration
+	[26573] = true, -- Consecration 12
 
 	-- PRIEST
 	-- [373276] = 24, -- Idol of Yogg-Saron
-	[451234] = 6, -- Voidwrath
-	[34433] = 6, -- Shadowfiend
+	[451234] = true, -- Voidwrath 6
+	[34433] = true, -- Shadowfiend 6
+	[1280137] = true, -- Mindbender 12
 
 	-- SHAMAN
-	[5394] = 15, -- Healing Stream Totem
-	[108280] = 10, -- Healing Tide Totem
-	[98008] = 6, -- Spirit Link Totem
-	[192077] = 7, -- Wind Rush Totem
-	[355580] = 6, -- Static Field Totem
-	[192058] = 2, -- Capacitor Totem
-	[2484] = 20, -- Earthbind Totem
-	[8143] = 10, -- Tremor Totem
-	[383013] = 6, -- Poison Cleansing Totem
-	[204336] = 3, -- Grounding Totem
-	[204331] = 15, -- Counterstrike Totem
-	[460697] = 15, -- Totem of Wrath
-	[51485] = 20, -- Earthgrab Totem
-	[198103] = 30, -- Earth Elemental
+	[5394] = true, -- Healing Stream Totem 15
+	[108280] = true, -- Healing Tide Totem 10
+	[98008] = true, -- Spirit Link Totem 6
+	[192077] = true, -- Wind Rush Totem 7
+	[355580] = true, -- Static Field Totem 6
+	[192058] = true, -- Capacitor Totem 2
+	[2484] = true, -- Earthbind Totem 20
+	[8143] = true, -- Tremor Totem 10
+	[383013] = true, -- Poison Cleansing Totem 6
+	[204336] = true, -- Grounding Totem 3
+	[204331] = true, -- Counterstrike Totem 15
+	[460697] = true, -- Totem of Wrath 15
+	[51485] = true, -- Earthgrab Totem 20
+	[198103] = true, -- Earth Elemental 30
 	--[444995] = 25, -- Surging Totem
 
 	-- MONK
-	[322118] = 12, -- Invoke Yu'lon, the Jade Serpent
+	[322118] = true, -- Invoke Yu'lon, the Jade Serpent 12
 }
 
 Constants.TargetAuras = {
@@ -569,4 +587,9 @@ Constants.FixBlizzardSpells = {
 	[204596] = true, -- Sigil of Flame
 	[207684] = true, -- Sigil or Misery
 	[325153] = true, -- Exploding Keg
+}
+
+-- C_Spell.GetSpellCooldown returns a very short cooldown but Blizzard never sets the cooldown which breaks hideWhileNotReady
+Constants.CheckCooldownFrameSpells = {
+	[190925] = true, -- Harpoon
 }

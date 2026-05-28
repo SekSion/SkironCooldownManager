@@ -142,9 +142,19 @@ end
 
 local function OnShow(child)
 	UIParent.SetAlpha(child, child.SCMHidden and 0 or 1)
-	if child.SCMGroup and (child.SCMChanged or child.SCMBuffBar) then
-		if child.SCMBuffBar and Constants.FakeAuras[child.SCMSpellID] then
-			child.SCMFakeAuraInstanceID = true
+
+	if child.SCMGroup and child.SCMChanged then
+		if child.SCMBuffBar then
+			if Constants.FakeAuras[child.SCMSpellID] then
+				child.SCMFakeAuraInstanceID = true
+			end
+
+			if child.SCMFakeAuraInstanceID and child.SCMUseFixedDuration then
+				child.SCMFixedDuration = GetTime() + Constants.FakeAuras[child.SCMSpellID]
+			elseif child.auraInstanceID then
+				child.SCMAuraInstanceID = child.SCMAuraInstanceID or child.auraInstanceID
+				child.SCMAuraDataUnit = child.SCMAuraDataUnit or child.auraDataUnit
+			end
 		end
 
 		SCM:ApplyAnchorGroupCDManagerConfig(child.SCMGroup, child.SCMGlobal, child.viewerFrame and child.viewerFrame.SCMUpdateScope)
@@ -153,7 +163,20 @@ end
 
 local function OnHide(child)
 	if child.SCMGroup and (child.SCMChanged or child.SCMBuffBar) then
-		if child.SCMBuffBar and child.SCMFakeAuraInstanceID then
+		if child.SCMBuffBar then
+			if child.SCMFakeAuraInstanceID and child.SCMFixedDuration and GetTime() < child.SCMFixedDuration then
+				return
+			elseif child.SCMAuraInstanceID and not child.SCMFakeAuraInstanceID then
+				local auraData = C_UnitAuras.GetAuraDataByAuraInstanceID(child.SCMAuraDataUnit, child.SCMAuraInstanceID)
+				if auraData and auraData.isFromPlayerOrPlayerPet then
+					return
+				end
+			end
+
+			child.SCMAuraInstanceID = nil
+			child.SCMAuraDataUnit = nil
+			child.SCMFixedDuration = nil
+
 			child.SCMFakeAuraInstanceID = nil
 		end
 
@@ -199,17 +222,22 @@ function Icons.SetupBuffBarHooks(child)
 	end
 	child.SCMShowHook = true
 
-	child:HookScript("OnShow", OnShow)
-
 	if Constants.FakeAuras[child.SCMSpellID] then
+		child:HookScript("OnShow", OnShow)
 		child:HookScript("OnHide", OnHide)
+
+		child.SCMUseFixedDuration = type(Constants.FakeAuras[child.SCMSpellID]) == "number"
 	else
+		child:HookScript("OnShow", OnShow)
 		hooksecurefunc(child, "OnAuraInstanceInfoCleared", OnHide)
+
+		child.SCMFakeAuraInstanceID = nil
+		child.SCMUseFixedDuration = nil
 	end
 end
 
-local function GetOrCacheChildren(viewer, shouldRefreshCache)
-	if shouldRefreshCache or not Cache.cachedViewerChildren[viewer] then
+local function GetOrCacheChildren(viewer)
+	if not Cache.cachedViewerChildren[viewer] or (viewer:GetNumChildren() ~= #Cache.cachedViewerChildren[viewer]) then
 		Cache.cachedViewerChildren[viewer] = { viewer:GetChildren() }
 	end
 
@@ -273,7 +301,7 @@ function Icons.ExpandScopedAnchorGroups(viewer, viewerData, scopedAnchorGroups)
 		return
 	end
 
-	local children = GetOrCacheChildren(viewer, viewerData.isBuffIcon)
+	local children = GetOrCacheChildren(viewer)
 	local categoryIndex = SCM.CooldownViewerNameToIndex[viewer:GetName()]
 	local defaultCooldownIDs = SCM.defaultCooldownViewerConfig.cooldownIDs
 	if not defaultCooldownIDs then
@@ -321,17 +349,19 @@ local function ProcessBuffIcon(child, childData, options)
 	if child.SCMCheckCooldownFrame then
 		isInactive = not child.Cooldown:IsVisible()
 	else
-		isInactive = not child.auraInstanceID
+		isInactive = not child.auraInstanceID or not child.auraDataUnit
 	end
 
 	local forceShow = SCM.simulateBuffs or (not SCM.isHideWhenInactiveEnabled and childData.alwaysShow)
 	local shouldHide = (childData.showWhileInactive and not isInactive) or (isInactive and not (forceShow or childData.showWhileInactive))
 
 	if shouldHide then
+		child.SCMChanged = child.SCMChanged or not child.SCMHidden
 		Icons.SetChildVisibilityState(child, false, true)
 		return
 	end
 
+	child.SCMChanged = child.SCMChanged or child.SCMHidden
 	Icons.SetChildVisibilityState(child, true, true)
 	Icons.UpdateChildDesaturation(child, isInactive)
 	Icons.UpdateChildGlow(child, isInactive)
@@ -342,6 +372,7 @@ local function ProcessRegularIcon(child, childData, options)
 
 	local shouldShow = not (childData.hideWhenNotOnCooldown and not Cooldowns.IsChildOnCooldown(child))
 	local applyNow = shouldShow and child.SCMHidden and not child.SCMLayoutLimited
+	child.SCMChanged = child.SCMChanged or applyNow
 	Icons.SetChildVisibilityState(child, shouldShow, applyNow)
 	child.SCMIconOptions = options
 
@@ -350,16 +381,19 @@ end
 
 local function ProcessBuffBar(child, childData, options)
 	Icons.SetupBuffBarHooks(child)
+	child.SCMBuffBarOptions = options
 
 	local isInactive = not child.auraInstanceID and not child.SCMFakeAuraInstanceID
 	local forceShow = SCM.simulateBuffs or (not SCM.isHideWhenInactiveEnabled and childData.alwaysShow)
 	local shouldHide = isInactive and not forceShow
 
 	if shouldHide then
+		child.SCMChanged = child.SCMChanged or not child.SCMHidden
 		Icons.SetChildVisibilityState(child, false, true)
 		return
 	end
 
+	child.SCMChanged = child.SCMChanged or child.SCMHidden
 	Icons.SetChildVisibilityState(child, true, true)
 end
 
@@ -381,31 +415,41 @@ local function ProcessSingleChild(child, validChildren, categoryIndex, isBuffIco
 
 	local configID, childData = GetSpellConfigByCooldownID(SCM.spellConfig, cooldownID)
 	if not (cooldownID and spellID and childData) then
-		Utils.ResetChildSCMState(child)
-		Icons.SetChildVisibilityState(child, false, true)
+		if child.SCMConfig then
+			Utils.ResetChildSCMState(child)
+		end
+
+		if not child.SCMHidden then
+			Icons.SetChildVisibilityState(child, false, true)
+		end
 		return
 	end
 
 	local group = GetConfiguredGroupForCategory(childData, categoryIndex)
 	local groupConfig = childData.anchorGroup and childData.anchorGroup[group]
-	if not (group and groupConfig) then
-		Utils.ResetChildSCMState(child)
-		Icons.SetChildVisibilityState(child, false, true)
-		return
-	end
+	if not (group and groupConfig) and child.SCMConfig then
+		if child.SCMConfig then
+			Utils.ResetChildSCMState(child)
+		end
 
-	if activeScopedAnchorGroups and not activeScopedAnchorGroups[group] then
+		if not child.SCMHidden then
+			Icons.SetChildVisibilityState(child, false, true)
+		end
 		return
 	end
 
 	AddChildToGroup(validChildren, group, child)
 
-	child.SCMChanged = (not child.SCMConfig or child.SCMConfig ~= groupConfig) or (not child.SCMCooldownID or child.SCMCooldownID ~= cooldownID)
+	child.SCMChanged = child.SCMChanged or (not child.SCMConfig or child.SCMConfig ~= groupConfig) or (not child.SCMCooldownID or child.SCMCooldownID ~= cooldownID)
 	child.SCMConfig = groupConfig
 	child.SCMOrder = groupConfig.order
 	child.SCMCooldownID = cooldownID
 	child.SCMConfigID = configID
 	child.SCMGroup = group
+
+	if activeScopedAnchorGroups and not activeScopedAnchorGroups[group] then
+		return
+	end
 
 	if isBuffIcon then
 		ProcessBuffIcon(child, groupConfig, options)
@@ -423,8 +467,6 @@ local function ProcessSingleBuffBarChild(child, validChildren, categoryIndex, op
 		return
 	end
 
-	local oldCooldownID = child.SCMCooldownID
-	local oldGroup = child.SCMGroup
 	local activeScopedAnchorGroups = Cache.activeScopedAnchorGroups
 	local cooldownID = child:GetCooldownID()
 	local categoryConfig = categoryIndex and SCM.defaultCooldownViewerConfig[categoryIndex]
@@ -438,43 +480,40 @@ local function ProcessSingleBuffBarChild(child, validChildren, categoryIndex, op
 
 	local configID, childData = GetSpellConfigByCooldownID(SCM.spellConfig, cooldownID)
 	if not (cooldownID and spellID and childData) then
-		if activeScopedAnchorGroups and oldGroup then
-			activeScopedAnchorGroups[oldGroup] = true
+		if child.SCMConfig then
+			Utils.ResetChildSCMState(child)
 		end
-
-		Utils.ResetChildSCMState(child)
-		Icons.SetChildVisibilityState(child, false, true)
+		if not child.SCMHidden then
+			Icons.SetChildVisibilityState(child, false, true)
+		end
 		return
 	end
 
 	local group = childData.source[TRACKED_BAR_CATEGORY]
 	local groupConfig = childData.anchorGroup and childData.anchorGroup[group]
 	if not (group and groupConfig) then
-		if activeScopedAnchorGroups and oldGroup then
-			activeScopedAnchorGroups[oldGroup] = true
+		if child.SCMConfig then
+			Utils.ResetChildSCMState(child)
 		end
-
-		Utils.ResetChildSCMState(child)
-		Icons.SetChildVisibilityState(child, false, true)
+		if not child.SCMHidden then
+			Icons.SetChildVisibilityState(child, false, true)
+		end
 		return
-	end
-
-	if activeScopedAnchorGroups and (oldCooldownID ~= cooldownID or oldGroup ~= group) then
-		if oldGroup then
-			activeScopedAnchorGroups[oldGroup] = true
-		end
-		activeScopedAnchorGroups[group] = true
 	end
 
 	AddChildToGroup(validChildren, group, child)
 
-	child.SCMChanged = (not child.SCMConfig or child.SCMConfig ~= groupConfig) or (not child.SCMCooldownID or child.SCMCooldownID ~= cooldownID)
+	child.SCMChanged = child.SCMChanged or (not child.SCMConfig or child.SCMConfig ~= groupConfig) or (not child.SCMCooldownID or child.SCMCooldownID ~= cooldownID)
 	child.SCMConfig = groupConfig
 	child.SCMOrder = groupConfig.order
 	child.SCMCooldownID = cooldownID
 	child.SCMConfigID = configID
 	child.SCMGroup = group
 	child.SCMBuffBar = true
+
+	if activeScopedAnchorGroups and not activeScopedAnchorGroups[group] then
+		return
+	end
 
 	ProcessBuffBar(child, groupConfig, options)
 end
@@ -484,7 +523,7 @@ function Icons.ProcessChildren(viewer, validChildren, viewerData)
 		return
 	end
 
-	local children = GetOrCacheChildren(viewer, viewerData.isBuffIcon or viewerData.isBuffBar)
+	local children = GetOrCacheChildren(viewer)
 	local categoryIndex = SCM.CooldownViewerNameToIndex[viewer:GetName()]
 	local options = SCM.db.profile.options
 	viewer.SCMUpdateScope = viewerData.updateScope

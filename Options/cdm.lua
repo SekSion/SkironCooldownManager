@@ -30,6 +30,27 @@ StaticPopupDialogs["SCM_CONFIRM_COPY_ANCHORS"] = {
 	preferredIndex = 3,
 }
 
+StaticPopupDialogs["SCM_RENAME_ANCHOR"] = {
+	text = "New Anchor Name",
+	button1 = "Rename",
+	button2 = "Cancel",
+	OnAccept = function(self, data)
+		if data and data.callback then
+			data.callback(self.EditBox:GetText())
+		end
+	end,
+	EditBoxOnEnterPressed = function(self)
+		if self:GetParent():GetButton1():IsEnabled() then
+			self:GetParent():GetButton1():Click()
+		end
+	end,
+	timeout = 0,
+	whileDead = true,
+	hideOnEscape = true,
+	preferredIndex = 3,
+	hasEditBox = true,
+}
+
 local iconTypeTabs = {
 	all = {
 		{ value = "general", text = "General" },
@@ -383,14 +404,18 @@ local function CreateAddSpellDropdown(owner, rootDescription, scrollFrame, ancho
 				info.category = data.category
 
 				local activeColor = (type(data.category) == "number" and data.category < 0 and colorDisabled) or (info.isKnown and colorKnown) or colorUnknown
-				parentButton:CreateButton(string.format("|T%d:0|t |cff%s%s (%d)|r", C_Spell.GetSpellTexture(info.spellID), activeColor, C_Spell.GetSpellName(info.spellID), cooldownID), function(info)
-					if not SCM:IsSpellInData(info.cooldownID, info.category) and not DoesScrollFrameContainSpellConfig(scrollFrame, info.configID, info.cooldownID) then
-						local dataIndex = scrollFrame:AddSpellBySpellID(info)
-						SCM:AddSpellToConfig(anchorIndex, dataIndex, info, data, item.targetCategory, isBuffIcon)
-						ApplyModeConfigUpdate(anchorIndex, mode)
-					end
-					return MenuResponse.Open
-				end, info)
+				parentButton:CreateButton(
+					string.format("|T%d:0|t |cff%s%s (%d)|r", C_Spell.GetSpellTexture(info.spellID), activeColor, C_Spell.GetSpellName(info.spellID), info.spellID),
+					function(info)
+						if not SCM:IsSpellInData(info.cooldownID, info.category) and not DoesScrollFrameContainSpellConfig(scrollFrame, info.configID, info.cooldownID) then
+							local dataIndex = scrollFrame:AddSpellBySpellID(info)
+							SCM:AddSpellToConfig(anchorIndex, dataIndex, info, data, item.targetCategory, isBuffIcon)
+							ApplyModeConfigUpdate(anchorIndex, mode)
+						end
+						return MenuResponse.Open
+					end,
+					info
+				)
 			end
 		end
 	end
@@ -1015,6 +1040,12 @@ local function SelectAnchor(widget, parentWidget, anchorIndex, anchorTabsTbl, mo
 		isProfileConfig = true
 	end
 
+	local anchorName = data.anchorName
+	if anchorTabsTbl[anchorIndex].text ~= anchorName then
+		anchorTabsTbl[anchorIndex].text = anchorName or ("Anchor " .. anchorIndex)
+		widget:SetTabs(anchorTabsTbl)
+	end
+
 	local scrollFrame = AceGUI:Create("ScrollFrame")
 	scrollFrame:SetLayout("flow")
 	widget:AddChild(scrollFrame)
@@ -1031,7 +1062,7 @@ local function SelectAnchor(widget, parentWidget, anchorIndex, anchorTabsTbl, mo
 	buttonGroup:SetLayout("flow")
 	anchorOptions:AddChild(buttonGroup)
 
-	local anchorButtonWidth = isGlobal and 0.5 or 0.33
+	local anchorButtonWidth = isGlobal and 0.33 or 0.25
 	local addAnchorButton = AceGUI:Create("Button")
 	addAnchorButton:SetText("Add Anchor")
 	addAnchorButton:SetRelativeWidth(anchorButtonWidth)
@@ -1061,10 +1092,26 @@ local function SelectAnchor(widget, parentWidget, anchorIndex, anchorTabsTbl, mo
 	end)
 	buttonGroup:AddChild(deleteAnchorButton)
 
+	local renameAnchorButton = AceGUI:Create("Button")
+	renameAnchorButton:SetText("Rename Anchor")
+	renameAnchorButton:SetRelativeWidth(anchorButtonWidth)
+	renameAnchorButton:SetDisabled(#anchorTabsTbl >= 15)
+	renameAnchorButton:SetCallback("OnClick", function()
+		StaticPopup_Show("SCM_RENAME_ANCHOR", nil, nil, {
+			callback = function(anchorName)
+				data.anchorName = anchorName
+				anchorTabsTbl[anchorIndex].text = anchorName
+				widget:SetTabs(anchorTabsTbl)
+				widget:SelectTab(anchorIndex)
+			end,
+		})
+	end)
+	buttonGroup:AddChild(renameAnchorButton)
+
 	if not isGlobal then
 		local useGlobalProfileConfig = AceGUI:Create("CheckBox")
-		useGlobalProfileConfig:SetLabel("Use Profile Config (EXPERIMENTAL)")
-		useGlobalProfileConfig:SetRelativeWidth(0.33)
+		useGlobalProfileConfig:SetLabel("Use Profile Config")
+		useGlobalProfileConfig:SetRelativeWidth(anchorButtonWidth)
 		useGlobalProfileConfig:SetValue(sourceData.useGlobalProfileConfig or false)
 		useGlobalProfileConfig:SetCallback("OnValueChanged", function(_, _, value)
 			sourceData.useGlobalProfileConfig = value
@@ -1072,6 +1119,7 @@ local function SelectAnchor(widget, parentWidget, anchorIndex, anchorTabsTbl, mo
 				GetProfileAnchorConfig()
 			end
 			ApplyModeConfigUpdate(anchorIndex, mode)
+
 			widget:SelectTab(anchorIndex)
 		end)
 		useGlobalProfileConfig:SetCallback("OnEnter", function(self)
@@ -1553,6 +1601,16 @@ local function SelectAnchor(widget, parentWidget, anchorIndex, anchorTabsTbl, mo
 
 										iconSettingsTabs:AddChild(castTimer)
 									end
+
+									local hideCountdownNumbers = AceGUI:Create("CheckBox")
+									hideCountdownNumbers:SetRelativeWidth(0.5)
+									hideCountdownNumbers:SetValue(buttonConfig.hideCountdownNumbers)
+									hideCountdownNumbers:SetLabel("Hide Timer Text")
+									hideCountdownNumbers:SetCallback("OnValueChanged", function(self, event, value)
+										buttonConfig.hideCountdownNumbers = value or nil
+										ApplyIconConfigUpdate()
+									end)
+									iconSettingsTabs:AddChild(hideCountdownNumbers)
 								else
 									local customColor = AceGUI:Create("ColorPicker")
 									customColor:SetRelativeWidth(0.5)
@@ -1678,16 +1736,17 @@ local function SelectAnchor(widget, parentWidget, anchorIndex, anchorTabsTbl, mo
 										iconSettingsTabs:AddChild(loadRaces)
 
 										local useSpellKnown = AceGUI:Create("CheckBox")
-										useSpellKnown:SetLabel("Spell Known")
+										useSpellKnown:SetLabel(buttonConfig.useSpellKnown == nil and "|cFFFF0000Spell Not Known" or "Spell Known")
 										useSpellKnown:SetRelativeWidth(0.5)
 										useSpellKnown:SetValue(buttonConfig.useSpellKnown)
+										useSpellKnown:SetTriState(true)
 										iconSettingsTabs:AddChild(useSpellKnown)
 
 										local loadSpellKnown = AceGUI:Create("EditBox")
 										loadSpellKnown:SetRelativeWidth(0.5)
 										loadSpellKnown:SetLabel("SpellID")
 										loadSpellKnown:SetText(buttonConfig.spellKnownSpellID and tostring(buttonConfig.spellKnownSpellID) or "")
-										loadSpellKnown:SetDisabled(not buttonConfig.useSpellKnown)
+										loadSpellKnown:SetDisabled(buttonConfig.useSpellKnown == false)
 										loadSpellKnown:SetCallback("OnEnterPressed", function(_, _, value)
 											buttonConfig.spellKnownSpellID = tonumber(value)
 											ApplyIconConfigUpdate()
@@ -1695,7 +1754,14 @@ local function SelectAnchor(widget, parentWidget, anchorIndex, anchorTabsTbl, mo
 
 										useSpellKnown:SetCallback("OnValueChanged", function(self, event, value)
 											buttonConfig.useSpellKnown = value
-											loadSpellKnown:SetDisabled(not value)
+
+											if buttonConfig.useSpellKnown == nil then
+												useSpellKnown:SetLabel("|cFFFF0000Spell Not Known")
+											else
+												useSpellKnown:SetLabel("Spell Known")
+											end
+
+											loadSpellKnown:SetDisabled(buttonConfig.useSpellKnown == false)
 											ApplyIconConfigUpdate()
 										end)
 
@@ -2055,8 +2121,8 @@ local function CreateAnchorTabGroup(parent, frame, mode)
 
 	local sourceConfig = (isGlobal and SCM.globalAnchorConfig) or (isBuffBar and SCM.buffBarsAnchorConfig) or SCM.anchorConfig
 	local anchorTabsTbl = {}
-	for i in ipairs(sourceConfig) do
-		tinsert(anchorTabsTbl, { value = i, text = "Anchor " .. i })
+	for i, anchorConfig in ipairs(sourceConfig) do
+		tinsert(anchorTabsTbl, { value = i, text = anchorConfig.anchorName or ("Anchor " .. i) })
 	end
 
 	anchorTabs:SetTabs(anchorTabsTbl)

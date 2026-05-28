@@ -48,9 +48,7 @@ function SCM:ApplyAnchorGroupCDManagerConfig(group, isGlobal, updateScope)
 		return
 	end
 
-	updateScope = updateScope
-		or (Utils.IsBuffBarGroup(scopedGroup) and UPDATE_SCOPE.BUFF_BAR)
-		or UPDATE_SCOPE.ALL
+	updateScope = updateScope or (Utils.IsBuffBarGroup(scopedGroup) and UPDATE_SCOPE.BUFF_BAR) or UPDATE_SCOPE.ALL
 
 	if updateScope == UPDATE_SCOPE.BUFF_BAR then
 		if not Utils.IsBuffBarGroup(scopedGroup) then

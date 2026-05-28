@@ -16,42 +16,13 @@ SCM.CustomAnchors = {}
 SCM.CustomEntries = {}
 SCM.Templates = {}
 
-local function OnEssentialCooldownViewerLayout(viewer)
-	SCM:InvalidateViewerChildrenCache(viewer)
-	SCM:InvalidateViewerChildrenCache(UtilityCooldownViewer)
-	SCM:ApplyEssentialCDManagerConfig()
-end
-
-local function OnUtilityCooldownViewerLayout(viewer)
-	SCM:InvalidateViewerChildrenCache(viewer)
-	SCM:InvalidateViewerChildrenCache(EssentialCooldownViewer)
-	SCM:ApplyUtilityCDManagerConfig()
-end
-
-local function OnBuffCooldownViewerLayout(viewer)
-	SCM:InvalidateViewerChildrenCache(viewer)
-	SCM:ApplyBuffIconCDManagerConfig()
-end
-
-local function OnBuffBarViewerLayout(viewer)
-	SCM:InvalidateViewerChildrenCache(viewer)
-	SCM:ApplyBuffBarCDManagerConfig()
-end
-
-local function OnCooldownViewerSettingsRefreshLayout(self)
-	SCM:ClearChildrenCache()
-	SCM:UpdateCooldownInfo(true)
-	SCM:UpdateDB()
-	SCM:ApplyAllCDManagerConfigs()
-end
-
 local pendingCustomGlowChildren = {}
 local function OnSpellAlertManagerShowAlert(_, child)
 	local options = SCM.db.profile.options
 	if not child.SCMConfig or not options.useCustomGlow or child.SCMActiveGlow then
 		if child.SCMWidth and child.SCMHeight then
-			local width = SCM:PixelPerfect(child.SCMWidth)
-			local height = SCM:PixelPerfect(child.SCMHeight)
+			local width = child.SCMWidth
+			local height = child.SCMHeight
 
 			local alert = child.SpellActivationAlert
 			alert:SetSize(width * 1.4, height * 1.4)
@@ -100,6 +71,28 @@ local function RefreshCooldownViewerData(releaseCustomIcons)
 end
 SCM.RefreshCooldownViewerData = RefreshCooldownViewerData
 
+local function OnEssentialCooldownViewerLayout()
+	SCM:ApplyEssentialCDManagerConfig()
+end
+
+local function OnUtilityCooldownViewerLayout()
+	SCM:ApplyUtilityCDManagerConfig()
+end
+
+local function OnBuffCooldownViewerLayout(viewer)
+	SCM:InvalidateViewerChildrenCache(viewer)
+	SCM:ApplyBuffIconCDManagerConfig()
+end
+
+local function OnBuffBarViewerLayout(viewer)
+	SCM:InvalidateViewerChildrenCache(viewer)
+	SCM:ApplyBuffBarCDManagerConfig()
+end
+
+local function OnCooldownViewerSettingsRefreshLayout()
+	RefreshCooldownViewerData(true)
+end
+
 function SCM:SetHooks()
 	hooksecurefunc(EssentialCooldownViewer, "RefreshLayout", OnEssentialCooldownViewerLayout)
 	hooksecurefunc(UtilityCooldownViewer, "RefreshLayout", OnUtilityCooldownViewerLayout)
@@ -119,7 +112,6 @@ end
 
 function SCM:PLAYER_ENTERING_WORLD(isInitialLogin, isReload)
 	if isInitialLogin or isReload then
-		--SCM.Cache.cachedViewerScale = SCM:PixelPerfect()
 		SCM:UpdateCooldownInfo(true)
 		SCM:UpdateDB()
 
@@ -139,6 +131,15 @@ function SCM:BAG_UPDATE_DELAYED()
 	if SCM.CustomIcons.UpdateItemCountText() then
 		SCM:ApplyAnchorGroupByIconType("item")
 	end
+end
+
+function SCM:ACTIONBAR_SLOT_CHANGED(actionSlot)
+	local actionType, itemID = GetActionInfo(actionSlot)
+	if actionType ~= "item" or not itemID then
+		return
+	end
+
+	SCM.CustomIcons.UpdateItemCountForItemID(itemID)
 end
 
 function SCM:UNIT_SPELLCAST_SUCCEEDED(_, _, spellID)
@@ -199,6 +200,14 @@ end
 
 function SCM:SPELL_UPDATE_USES(spellID, baseSpellID)
 	SCM.CustomIcons.UpdateSpellUses(spellID, baseSpellID)
+end
+
+function SCM:SPELL_ACTIVATION_OVERLAY_GLOW_SHOW(spellID, ...)
+	SCM.CustomIcons.UpdateSpellGlow(spellID, "SHOW")
+end
+
+function SCM:SPELL_ACTIVATION_OVERLAY_GLOW_HIDE(spellID)
+	SCM.CustomIcons.UpdateSpellGlow(spellID, "HIDE")
 end
 
 function SCM:PLAYER_EQUIPMENT_CHANGED()
@@ -338,6 +347,8 @@ EventUtil.ContinueOnAddOnLoaded(addonName, function()
 	eventFrame:RegisterEvent("SPELL_UPDATE_USES")
 	eventFrame:RegisterEvent("SPELL_UPDATE_USABLE")
 	eventFrame:RegisterEvent("SPELL_RANGE_CHECK_UPDATE")
+	eventFrame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW")
+	eventFrame:RegisterEvent("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE")
 	eventFrame:RegisterEvent("COOLDOWN_VIEWER_SPELL_OVERRIDE_UPDATED")
 	eventFrame:RegisterEvent("BAG_UPDATE_DELAYED")
 	eventFrame:RegisterEvent("TRAIT_CONFIG_UPDATED")
@@ -345,6 +356,7 @@ EventUtil.ContinueOnAddOnLoaded(addonName, function()
 	eventFrame:RegisterEvent("EDIT_MODE_LAYOUTS_UPDATED")
 	eventFrame:RegisterEvent("UI_SCALE_CHANGED")
 	eventFrame:RegisterEvent("DISPLAY_SIZE_CHANGED")
+	eventFrame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 	eventFrame:RegisterEvent("CVAR_UPDATE")
 	eventFrame:RegisterEvent("SPELL_DATA_LOAD_RESULT")
 	eventFrame:RegisterEvent("ITEM_DATA_LOAD_RESULT")

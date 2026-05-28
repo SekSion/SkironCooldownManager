@@ -10,6 +10,7 @@ local SPELL_ID_VOID_METAMORPHOSIS = UNIT_POWER_SPELL_IDS.VOID_METAMORPHOSIS_SPEL
 local SPELL_ID_DARK_HEART = UNIT_POWER_SPELL_IDS.DARK_HEART_SPELL_ID or 1225789
 local SPELL_ID_SILENCE_THE_WHISPERS = UNIT_POWER_SPELL_IDS.SILENCE_THE_WHISPERS_SPELL_ID or 1227702
 local SPELL_ID_MAELSTROM_WEAPON = UNIT_POWER_SPELL_IDS.MAELSTROM_WEAPON or 344179
+local SPELL_ID_SOUL_FRAGMENTS = 228477
 local SPELL_ID_TIP_OF_THE_SPEAR = 260286
 local SPELL_ID_ICICLES = 205473
 
@@ -18,6 +19,7 @@ local CHARGED_COMBO_POINT_COLOR = SCMConstants.ChargedComboPointColor
 local DEFAULT_RESOURCE_BAR_ANCHOR = "ANCHOR:1"
 local RESOURCE_BAR_RECONFIGURE_EVENTS = {
 	PLAYER_ENTERING_WORLD = true,
+	PLAYER_SPECIALIZATION_CHANGED = true,
 	PLAYER_GAINS_VEHICLE_DATA = true,
 	PLAYER_LOSES_VEHICLE_DATA = true,
 	UNIT_DISPLAYPOWER = true,
@@ -121,6 +123,12 @@ local function UpdateResourceBarBorder(bar, barOptions)
 
 	borderFrame:SetBackdrop(backdropInfo)
 	borderFrame:ApplyBackdrop()
+	for _, region in ipairs({ borderFrame:GetRegions() }) do
+		if region:IsObjectType("Texture") then
+			region:SetTexelSnappingBias(0)
+			region:SetSnapToPixelGrid(false)
+		end
+	end
 
 	local color = barOptions.backdropColor or {}
 	local alpha = color.a == nil and 1 or color.a
@@ -148,6 +156,8 @@ local function UpdateResourceBarBackgroundTexture(bar, barOptions)
 	backgroundTexture:SetVertexColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a)
 
 	backgroundTexture:SetTexture(LSM:Fetch("statusbar", backgroundTextureName))
+	backgroundTexture:SetTexelSnappingBias(0)
+	backgroundTexture:SetSnapToPixelGrid(false)
 	SetRegionPoint(backgroundTexture, bar)
 	backgroundTexture:Show()
 end
@@ -271,6 +281,13 @@ local function GetMaelstromWeaponValue()
 	return currentValue, maxValue
 end
 
+local function GetVengeanceSoulFragmentValue()
+	local maxValue = 6
+	local currentValue = C_Spell.GetSpellCastCount(SPELL_ID_SOUL_FRAGMENTS) or 0
+
+	return currentValue, maxValue, currentValue
+end
+
 local function GetCurrentPowerValue(resourceKind, powerType, spellID, segmentCount)
 	if resourceKind == "runes" then
 		return GetRuneValues()
@@ -306,6 +323,10 @@ local function GetCurrentPowerValue(resourceKind, powerType, spellID, segmentCou
 	if resourceKind == "soulFragments" then
 		local currentValue, maxValue = GetSoulFragmentValues()
 		return currentValue, maxValue
+	end
+
+	if resourceKind == "vengeanceSoulFragments" then
+		return GetVengeanceSoulFragmentValue()
 	end
 
 	if resourceKind == "destructionSoulShards" then
@@ -398,6 +419,8 @@ local function UpdateRechargeSegment(bar)
 	local texturePath = bar.SCMTexturePath or LSM:Fetch("statusbar", bar.barOptions.texture)
 	local r, g, b = GetPowerColor(bar.powerToken, bar.powerType)
 	bar.RechargeSegment:SetStatusBarTexture(texturePath)
+	bar.RechargeSegment:GetStatusBarTexture():SetTexelSnappingBias(0)
+	bar.RechargeSegment:GetStatusBarTexture():SetSnapToPixelGrid(false)
 	bar.RechargeSegment:SetStatusBarColor(r, g, b)
 end
 
@@ -443,7 +466,7 @@ local function UpdateSpellChargeRecharge(bar, chargeInfo)
 		bar.RechargeSegment = segment
 	end
 
-	segment:SetFrameLevel(bar:GetFrameLevel() + 1)
+	segment:SetFrameLevel(bar:GetFrameLevel())
 	segment:ClearAllPoints()
 	segment:SetPoint("LEFT", statusBarTexture, "RIGHT", 0, 0)
 	segment:SetWidth(segmentWidth)
@@ -468,8 +491,8 @@ local function ApplyResourceBarSparkOptions(bar, sparkAnchor, optionsChanged)
 	local spark = bar.Spark
 	local sparkOptions = bar.barOptions and bar.barOptions.spark
 	local color = sparkOptions.color
-	local width = SCM:PixelPerfect(sparkOptions.width)
-	local height = SCM:PixelPerfect(sparkOptions.height)
+	local width = sparkOptions.width
+	local height = sparkOptions.height
 	local blendMode = sparkOptions.blendMode
 
 	local texture = sparkOptions.texture
@@ -494,8 +517,8 @@ local function ApplyResourceBarSparkOptions(bar, sparkAnchor, optionsChanged)
 	spark:SetTexture(texturePath)
 	spark:SetVertexColor(color.r, color.g, color.g, color.a)
 	spark:SetAlpha(1)
-	spark:SetSnapToPixelGrid(false)
 	spark:SetTexelSnappingBias(0)
+	spark:SetSnapToPixelGrid(false)
 	spark:ClearAllPoints()
 	PixelUtil.SetPoint(spark, "LEFT", sparkAnchor, "RIGHT", sparkOptions.xOffset, sparkOptions.yOffset)
 end
@@ -595,6 +618,8 @@ local function CreateTicks(bar, tickCount, tickColor)
 	for tickIndex = #bar.SegmentTicks + 1, tickCount do
 		local tick = bar.SegmentTicks[tickIndex] or tickFrame:CreateTexture(nil, "OVERLAY")
 		tick:SetColorTexture(tickColor.r, tickColor.g, tickColor.b, tickColor.a)
+		tick:SetTexelSnappingBias(0)
+		tick:SetSnapToPixelGrid(false)
 		bar.SegmentTicks[tickIndex] = tick
 	end
 
@@ -635,6 +660,8 @@ local function UpdateTicks(bar, maxValue)
 		local tick = tickTextures[tickIndex]
 		tick:ClearAllPoints()
 		tick:SetColorTexture(tickColor.r, tickColor.g, tickColor.b, tickColor.a)
+		tick:SetTexelSnappingBias(0)
+		tick:SetSnapToPixelGrid(false)
 		tick:SetPoint("LEFT", tickIndex * offset, 0)
 		tick:SetWidth(tickWidth)
 		tick:SetHeight(barHeight)
@@ -719,6 +746,8 @@ local function CreateSegments(bar, segmentCount)
 		local segmentBar = bar.SegmentFillBars[segmentIndex] or CreateFrame("StatusBar", nil, bar)
 		segmentBar:SetMinMaxValues(0, 1)
 		segmentBar:SetStatusBarTexture(texturePath)
+		segmentBar:GetStatusBarTexture():SetTexelSnappingBias(0)
+		segmentBar:GetStatusBarTexture():SetSnapToPixelGrid(false)
 		segmentBar:SetFrameLevel(2)
 		bar.SegmentFillBars[segmentIndex] = segmentBar
 	end
@@ -807,6 +836,8 @@ local function UpdateSegments(bar, maxValue, currentValue, resourceSegmentValues
 		local segmentBar = segmentBars[segmentIndex]
 		segmentBar:ClearAllPoints()
 		segmentBar:SetStatusBarTexture(texturePath)
+		segmentBar:GetStatusBarTexture():SetTexelSnappingBias(0)
+		segmentBar:GetStatusBarTexture():SetSnapToPixelGrid(false)
 		segmentBar:SetPoint("LEFT", (segmentIndex - 1) * segmentWidth, 0)
 		segmentBar:SetWidth(segmentWidth)
 		segmentBar:SetHeight(segmentHeight)
@@ -849,17 +880,23 @@ local function ApplyBarAppearance(bar, barOptions)
 		local texturePath = LSM:Fetch("statusbar", barOptions.texture)
 		bar.SCMTexturePath = texturePath
 		bar:SetStatusBarTexture(texturePath)
+		bar:GetStatusBarTexture():SetTexelSnappingBias(0)
+		bar:GetStatusBarTexture():SetSnapToPixelGrid(false)
 		bar:GetStatusBarTexture():Show()
 
 		if bar.SegmentFillBars then
 			for _, segmentBar in ipairs(bar.SegmentFillBars) do
 				segmentBar:SetStatusBarTexture(texturePath)
+				segmentBar:GetStatusBarTexture():SetTexelSnappingBias(0)
+				segmentBar:GetStatusBarTexture():SetSnapToPixelGrid(false)
 				segmentBar:GetStatusBarTexture():Show()
 			end
 		end
 		UpdateRechargeSegment(bar)
 
 		local statusBarTexture = bar:GetStatusBarTexture()
+		statusBarTexture:SetTexelSnappingBias(0)
+		statusBarTexture:SetSnapToPixelGrid(false)
 		SetRegionPoint(statusBarTexture, bar)
 		UpdateResourceBarBackgroundTexture(bar, barOptions)
 	else
@@ -934,6 +971,8 @@ local function InitializeBarSkin(bar)
 
 	if not bar.Spark then
 		bar.Spark = bar.SparkFrame:CreateTexture(nil, "OVERLAY", nil, 2)
+		bar.Spark:SetTexelSnappingBias(0)
+		bar.Spark:SetSnapToPixelGrid(false)
 		bar.Spark:Hide()
 	end
 
@@ -996,6 +1035,12 @@ local function RegisterBarEvents(bar, barOptions)
 		return
 	end
 
+	if bar.resourceKind == "vengeanceSoulFragments" then
+		bar:RegisterUnitEvent("UNIT_AURA", "player")
+		bar:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
+		return
+	end
+
 	local powerUpdateEvent = barOptions.useFrequentPowerUpdates and "UNIT_POWER_FREQUENT" or "UNIT_POWER_UPDATE"
 	bar:RegisterUnitEvent(powerUpdateEvent, "player")
 
@@ -1048,7 +1093,7 @@ end
 
 local function SetBarHeight(bar, height)
 	local previousHeight = bar:GetHeight() or 0
-	PixelUtil.SetHeight(bar, height, height)
+	bar:SetHeight(height)
 
 	return previousHeight ~= (bar:GetHeight() or 0)
 end
@@ -1400,6 +1445,10 @@ function SCMResourceBarControllerMixin:RefreshBarDisplay(bar, refreshTicks, skip
 		HideRegions(bar.RuneSegmentBars)
 		bar:GetStatusBarTexture():SetAlpha(1)
 		UpdateSpellChargeRecharge(bar, resourceSegmentValues)
+	elseif bar.resourceKind == "vengeanceSoulFragments" then
+		bar.SCMSegmentedDisplay = nil
+		HideRegions(bar.SegmentFillBars)
+		bar:GetStatusBarTexture():SetAlpha(1)
 	else
 		HideRechargeSegment(bar)
 		UpdateSegments(bar, maxValue, currentValue, resourceSegmentValues)
@@ -1464,6 +1513,11 @@ function SCMResourceBarControllerMixin:RefreshBarDisplay(bar, refreshTicks, skip
 
 	if bar.resourceKind == "spellCharges" then
 		textValue:SetText(displayValue)
+		return maxValue
+	end
+
+	if bar.resourceKind == "vengeanceSoulFragments" then
+		textValue:SetText(tostring(displayValue))
 		return maxValue
 	end
 
@@ -1534,9 +1588,9 @@ function SCMResourceBarControllerMixin:UpdateBarLayout()
 	end
 
 	if primaryShown and secondaryShown then
-		PixelUtil.SetHeight(self, primaryHeight + secondaryHeight + spacing)
+		self:SetHeight(primaryHeight + secondaryHeight + spacing)
 	elseif primaryShown or secondaryShown then
-		PixelUtil.SetHeight(self, primaryShown and primaryHeight or secondaryHeight)
+		self:SetHeight(primaryShown and primaryHeight or secondaryHeight)
 	else
 		self:SetHeight(0)
 	end

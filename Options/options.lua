@@ -469,7 +469,9 @@ local function OpenOptions()
 	LibWindow.RegisterConfig(frame.frame, options.optionsWindow)
 	LibWindow.SetScale(frame.frame, options.menuScale)
 	frame.frame.TitleContainer:HookScript("OnMouseUp", function()
-		LibWindow.SavePosition(frame.frame)
+		if options.savePosition then
+			LibWindow.SavePosition(frame.frame)
+		end
 	end)
 
 	if options.savePosition then
