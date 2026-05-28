@@ -114,6 +114,40 @@ local function ApplyCooldownFont(cooldownFrame, options)
 	end
 end
 
+local function OnSetCooldown(self)
+	local options = SCM.db.profile.options
+	local parent = self:GetParent()
+	local forceActiveSwipe = parent.SCMConfig and parent.SCMConfig.forceActiveSwipe
+
+	SCM.Cooldowns.ApplyNumericRuleFormatter(self)
+
+	if parent.auraInstanceID or parent.SCMFakeAuraInstanceID or parent.SCMBuffOptions then
+		if options.disableRegularIconActiveSwipe and not forceActiveSwipe then
+			if options.recolorNormalSwipe then
+				self:SetSwipeColor(unpack(options.normalSwipeColor))
+			else
+				self:SetSwipeColor(0, 0, 0, 0.7)
+			end
+
+			if parent.SCMBuffOptions then
+				self:SetReverse(options.reverseActiveSwipe)
+			end
+		else
+			if options.recolorActiveSwipe then
+				self:SetSwipeColor(unpack(options.activeSwipeColor))
+			end
+
+			self:SetReverse(options.reverseActiveSwipe)
+		end
+	elseif options.recolorNormalSwipe then
+		self:SetSwipeColor(unpack(options.normalSwipeColor))
+		self:SetReverse(false)
+	else
+		self:SetSwipeColor(0, 0, 0, 0.7)
+	end
+	ApplyCooldownFont(self, options)
+end
+
 local function ApplyCooldownStyle(child, options)
 	local cooldownFrame = child.GetCooldownFrame and child:GetCooldownFrame() or child.Cooldown
 	if cooldownFrame then
@@ -126,44 +160,13 @@ local function ApplyCooldownStyle(child, options)
 			child.CooldownFlash:SetAlpha(0)
 		end
 
-		cooldownFrame:ClearAllPoints()
-		cooldownFrame:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -0)
-		cooldownFrame:SetPoint("BOTTOMRIGHT", child, "BOTTOMRIGHT", -0, 0)
+		-- cooldownFrame:ClearAllPoints()
+		-- cooldownFrame:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -0)
+		cooldownFrame:SetPoint("BOTTOMRIGHT", child, "BOTTOMRIGHT", -SCM:PixelPerfect(), SCM:PixelPerfect())
 		cooldownFrame:SetSwipeTexture("Interface\\Buttons\\WHITE8x8")
 
-		hooksecurefunc(cooldownFrame, "SetCooldown", function(self)
-			local options = SCM.db.profile.options
-			local parent = self:GetParent()
-			local forceActiveSwipe = parent.SCMConfig and parent.SCMConfig.forceActiveSwipe
-
-			SCM.Cooldowns.ApplyNumericRuleFormatter(self)
-
-			if parent.auraInstanceID or parent.SCMFakeAuraInstanceID or parent.SCMBuffOptions then
-				if options.disableRegularIconActiveSwipe and not forceActiveSwipe then
-					if options.recolorNormalSwipe then
-						self:SetSwipeColor(unpack(options.normalSwipeColor))
-					else
-						self:SetSwipeColor(0, 0, 0, 0.7)
-					end
-
-					if parent.SCMBuffOptions then
-						self:SetReverse(options.reverseActiveSwipe)
-					end
-				else
-					if options.recolorActiveSwipe then
-						self:SetSwipeColor(unpack(options.activeSwipeColor))
-					end
-
-					self:SetReverse(options.reverseActiveSwipe)
-				end
-			elseif options.recolorNormalSwipe then
-				self:SetSwipeColor(unpack(options.normalSwipeColor))
-				self:SetReverse(false)
-			else
-				self:SetSwipeColor(0, 0, 0, 0.7)
-			end
-			ApplyCooldownFont(self, options)
-		end)
+		hooksecurefunc(cooldownFrame, "SetCooldown", OnSetCooldown)
+		OnSetCooldown(cooldownFrame)
 
 		ApplyCooldownFont(cooldownFrame, options)
 	end
