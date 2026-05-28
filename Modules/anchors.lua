@@ -64,7 +64,7 @@ function SCM:UpdateUUFValues(options, maxGroupWidth, rowConfig)
 			if not UUF_Player.SCMHook then
 				UUF_Player.SCMHook = true
 				hooksecurefunc(UUF_Player, "SetPoint", function(self)
-					if options.anchorUUF and options.anchorUUFRoles and options.anchorUUFRoles[(select(5, Utils.GetSpec()))] then
+					if self.SCMAnchor and options.anchorUUF and options.anchorUUFRoles and options.anchorUUFRoles[(select(5, Utils.GetSpec()))] then
 						self.SCMAnchor.SetPoint(self, "TOPRIGHT", self.SCMAnchor, "TOPLEFT", self.SCMOffset, self.SCMYOffset)
 						if options.adjustHeight then
 							self.SCMAnchor.SetHeight(self, self.SCMHeight)
@@ -85,7 +85,7 @@ function SCM:UpdateUUFValues(options, maxGroupWidth, rowConfig)
 				end)
 
 				hooksecurefunc(UUF_Player, "SetSize", function(self)
-					if options.anchorUUF and options.anchorUUFRoles and options.anchorUUFRoles[(select(5, Utils.GetSpec()))] and options.adjustHeight then
+					if self.SCMAnchor and options.anchorUUF and options.anchorUUFRoles and options.anchorUUFRoles[(select(5, Utils.GetSpec()))] and options.adjustHeight then
 						self.SCMAnchor.SetHeight(self, self.SCMHeight)
 						self.SCMAnchor.SetHeight(UUF_Player_HealthBar, self.SCMHeight - 2)
 						self.SCMAnchor.SetHeight(UUF_Player_HealthBackground, self.SCMHeight - 2)
@@ -111,11 +111,11 @@ function SCM:UpdateUUFValues(options, maxGroupWidth, rowConfig)
 
 			if UUF_Player.HealthPrediction then
 				if UUF_Player.HealthPrediction.healAbsorb then
-					self.SCMAnchor.SetHeight(UUF_Player.HealthPrediction.healAbsorb, UUF_Player.SCMOriginalHeight - 2)
+					UUF_Player.SCMAnchor.SetHeight(UUF_Player.HealthPrediction.healAbsorb, UUF_Player.SCMOriginalHeight - 2)
 				end
 
 				if UUF_Player.HealthPrediction.damageAbsorb then
-					self.SCMAnchor.SetHeight(UUF_Player.HealthPrediction.damageAbsorb, UUF_Player.SCMOriginalHeight - 2)
+					UUF_Player.SCMAnchor.SetHeight(UUF_Player.HealthPrediction.damageAbsorb, UUF_Player.SCMOriginalHeight - 2)
 				end
 			end
 
@@ -154,7 +154,7 @@ function SCM:UpdateUUFValues(options, maxGroupWidth, rowConfig)
 			if not UUF_Target.SCMHook then
 				UUF_Target.SCMHook = true
 				hooksecurefunc(UUF_Target, "SetPoint", function(self)
-					if options.anchorUUF and options.anchorUUFRoles and options.anchorUUFRoles[(select(5, Utils.GetSpec()))] then
+					if self.SCMAnchor and options.anchorUUF and options.anchorUUFRoles and options.anchorUUFRoles[(select(5, Utils.GetSpec()))] then
 						self.SCMAnchor.SetPoint(self, "TOPLEFT", self.SCMAnchor, "TOPRIGHT", self.SCMOffset, self.SCMYOffset)
 
 						if options.adjustHeight then
@@ -166,7 +166,7 @@ function SCM:UpdateUUFValues(options, maxGroupWidth, rowConfig)
 				end)
 
 				hooksecurefunc(UUF_Target, "SetSize", function(self)
-					if options.anchorUUF and options.anchorUUFRoles and options.anchorUUFRoles[(select(5, Utils.GetSpec()))] and options.adjustHeight then
+					if self.SCMAnchor and options.anchorUUF and options.anchorUUFRoles and options.anchorUUFRoles[(select(5, Utils.GetSpec()))] and options.adjustHeight then
 						self.SCMAnchor.SetHeight(self, self.SCMHeight)
 						self.SCMAnchor.SetHeight(UUF_Target_HealthBar, self.SCMHeight - 2)
 						self.SCMAnchor.SetHeight(UUF_Target_HealthBackground, self.SCMHeight - 2)
