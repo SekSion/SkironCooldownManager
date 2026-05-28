@@ -213,7 +213,7 @@ local function LayoutAnchorGroup(group, visibleChildren, anchorConfig, options, 
 	local secondaryGrowDir = anchorConfig.secondaryGrow or "DOWN"
 	local baseSpacing = anchorConfig.spacing or 0
 	local point, anchor, relativePoint, xOffset, yOffset = unpack(anchorConfig and anchorConfig.anchor or DEFAULT_ANCHOR)
-	local initialWidth = rowConfig[1].iconWidth or rowConfig[1].size or 47
+	local initialWidth = (rowConfig[1].useFixedWidth and rowConfig[1].fixedWidth) or rowConfig[1].iconWidth or rowConfig[1].size or 47
 	local initialHeight = rowConfig[1].iconHeight or rowConfig[1].size or 47
 	local isCentered = growDir == "CENTER" or growDir == "CENTERED"
 	local isFixed = growDir == "FIXED"
