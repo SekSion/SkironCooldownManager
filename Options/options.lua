@@ -4,6 +4,7 @@ local AceGUI = LibStub("AceGUI-3.0")
 local LibEditModeOverride = LibStub("LibEditModeOverride-1.0")
 local LibCustomGlow = LibStub("LibCustomGlow-1.0")
 local LibWindow = LibStub("LibWindow-1.1")
+local Options = SCM.Options
 local Utils = SCM.Utils
 local ToGlobalGroup = Utils.ToGlobalGroup
 local ToBuffBarGroup = Utils.ToBuffBarGroup

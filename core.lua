@@ -2,6 +2,7 @@ local addonName, SCM = ...
 local eventFrame = CreateFrame("Frame")
 
 SCM.CDM = {}
+SCM.Options = {}
 SCM.Cache = {}
 SCM.Utils = {}
 SCM.CustomIcons = {}
@@ -15,6 +16,7 @@ SCM.Skins = {}
 SCM.CustomAnchors = {}
 SCM.CustomEntries = {}
 SCM.Templates = {}
+SCM.States = {}
 
 local pendingCustomGlowChildren = {}
 local function OnSpellAlertManagerShowAlert(_, child)
