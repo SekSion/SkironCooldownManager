@@ -160,6 +160,26 @@ function Cooldowns.SetupBuffIconHooks(child, options)
 	end
 end
 
+function Cooldowns.GetChildCooldown(child)
+	local cooldownData = SCM.defaultCooldownViewerConfig.cooldownIDs[child.SCMCooldownID]
+
+	local durationObject
+
+	local spellCooldown = C_Spell.GetSpellCooldown(child.SCMSpellID)
+	if spellCooldown and spellCooldown.isActive and not spellCooldown.isOnGCD then
+		durationObject = C_Spell.GetSpellCooldownDuration(child.SCMSpellID, true)
+	end
+
+	if cooldownData.charges and not durationObject then
+		local spellCharges = C_Spell.GetSpellCharges(child.SCMSpellID)
+		if spellCharges and spellCharges.isActive and not spellCharges.isOnGCD then
+			durationObject = C_Spell.GetSpellChargeDuration(child.SCMSpellID, true)
+		end
+	end
+
+	return durationObject ~= nil, durationObject
+end
+
 function Cooldowns.IsChildOnCooldown(child)
 	if not child or not child.Cooldown then
 		return
