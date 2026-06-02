@@ -205,7 +205,7 @@ end
 
 local function GetNextLayoutDuplicateChild(child, masterCooldownID, masterChild)
 	local duplicateChild = child.SCMLayoutNextDuplicate
-	if duplicateChild and (duplicateChild == child or duplicateChild == masterChild or duplicateChild:GetCooldownID() ~= masterCooldownID) then
+	if duplicateChild and (duplicateChild == masterChild or duplicateChild:GetCooldownID() ~= masterCooldownID) then
 		child.SCMLayoutNextDuplicate = nil
 		return
 	end
