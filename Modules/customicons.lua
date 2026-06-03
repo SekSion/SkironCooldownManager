@@ -105,7 +105,7 @@ local function OnIconCooldownDone(self)
 	end
 
 	if parent and parent.SCMGroup then
-		SCM:ApplyAnchorGroupCDManagerConfig(parent.SCMGroup, parent.SCMGlobal, CDM.UPDATE_SCOPE.ESSENTIAL_UTILITY)
+		SCM:ApplyAnchorGroupCDManagerConfig(parent.SCMGroup, parent.SCMGlobal)
 	end
 end
 
@@ -308,7 +308,7 @@ local function GetActiveCustomTimer(frame, iconType, config, now)
 		return
 	end
 
-	if startTime + duration > now then
+	if startTime + duration > (now + 0.1) then
 		return startTime, duration
 	end
 
@@ -394,7 +394,7 @@ local function UpdateCustomIconCooldown(frame, iconType, config)
 		--local count = C_Item.GetItemCount(itemID, false, true)
 		local startTime, duration, _, modRate = C_Item.GetItemCooldown(itemID)
 
-		if duration > 0 and (startTime + duration) - GetTime() >= 0 then
+		if duration > 0 and (startTime + duration) - now >= 0 then
 			if not frame.isOnCooldown or frame.SCMCooldownStartTime ~= startTime or frame.SCMCooldownDuration ~= duration then
 				if duration < 0.1 then
 					frame.Icon:SetVertexColor(CooldownViewerConstants.ITEM_NOT_USABLE_COLOR:GetRGBA())
@@ -432,7 +432,7 @@ local function UpdateCustomIconCooldown(frame, iconType, config)
 
 	if iconType == "slot" and config.slotID then
 		local startTime, duration = GetInventoryItemCooldown("player", config.slotID)
-		if startTime and startTime > 0 and (startTime + duration) - GetTime() >= 0.1 then
+		if startTime and startTime > 0 and (startTime + duration) - now >= 0.1 then
 			frame.Cooldown:SetCooldown(startTime, duration)
 
 			local globalCooldown = C_Spell.GetSpellCooldown(61304)
@@ -444,6 +444,7 @@ local function UpdateCustomIconCooldown(frame, iconType, config)
 		end
 	end
 
+	frame.isOnCooldown = false
 	frame.Cooldown:Clear()
 	frame.Icon:SetVertexColor(1, 1, 1)
 	frame.Icon:SetDesaturated(false)
@@ -851,8 +852,6 @@ local function RebuildCustomIconLoadCache()
 	customIconRequests.requestedItemIDs = customIconRequests.requestedItemIDs or {}
 	local requestedSpellIDs = customIconRequests.requestedSpellIDs
 	local requestedItemIDs = customIconRequests.requestedItemIDs
-	wipe(requestedSpellIDs)
-	wipe(requestedItemIDs)
 
 	wipe(Cache.cachedCustomSpellEntriesBySpellID)
 	wipe(Cache.cachedCustomItemEntriesByItemID)

@@ -131,6 +131,14 @@ function SCM:BAG_UPDATE_DELAYED()
 	if SCM.CustomIcons.UpdateItemCountText() then
 		SCM:ApplyAnchorGroupByIconType("item")
 	end
+
+	if not self.initEquipment then
+		self.initEquipment = true
+		C_Timer.After(1, function()
+			SCM:CreateAllCustomIcons("slot")
+			SCM:ApplyAnchorGroupByIconType("slot")
+		end)
+	end
 end
 
 function SCM:ACTIONBAR_SLOT_CHANGED(actionSlot)
@@ -216,7 +224,7 @@ function SCM:PLAYER_EQUIPMENT_CHANGED()
 end
 
 function SCM:PLAYER_EQUIPED_SPELLS_CHANGED()
-	C_Timer.After(0.1, function()
+	C_Timer.After(1, function()
 		SCM:CreateAllCustomIcons("slot")
 		SCM:ApplyAnchorGroupByIconType("slot")
 	end)
@@ -225,12 +233,12 @@ function SCM:PLAYER_EQUIPED_SPELLS_CHANGED()
 end
 
 function SCM:PLAYER_REGEN_ENABLED()
-	if not self.appliedOptions then
-		self:UpdateDB()
-		self:ApplyOptions()
-	end
-
-	SCM:ApplyAllCDManagerConfigs()
+	-- if not self.appliedOptions then
+	-- 	self:UpdateDB()
+	-- 	self:ApplyOptions()
+	-- end
+	--
+	-- SCM:ApplyAllCDManagerConfigs()
 end
 
 function SCM:PLAYER_REGEN_DISABLED() end
@@ -284,12 +292,24 @@ function SCM:COOLDOWN_VIEWER_SPELL_OVERRIDE_UPDATED(baseSpellID, overrideSpellID
 end
 
 function SCM:SPELL_DATA_LOAD_RESULT(spellID, success)
+	local requestedSpellIDs = SCM.Cache.customIconRequests.requestedSpellIDs
+	if not requestedSpellIDs or not requestedSpellIDs[spellID] then
+		return
+	end
+	requestedSpellIDs[spellID] = nil
+
 	if success then
 		SCM.CustomIcons.CreateSpellIcon(spellID)
 	end
 end
 
 function SCM:ITEM_DATA_LOAD_RESULT(itemID, success)
+	local requestedItemIDs = SCM.Cache.customIconRequests.requestedItemIDs
+	if not requestedItemIDs or not requestedItemIDs[itemID] then
+		return
+	end
+	requestedItemIDs[itemID] = nil
+
 	if success then
 		SCM.CustomIcons.CreateItemIcon(itemID)
 	end
@@ -339,7 +359,7 @@ EventUtil.ContinueOnAddOnLoaded(addonName, function()
 
 	eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 	eventFrame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
-	eventFrame:RegisterEvent("PLAYER_EQUIPED_SPELLS_CHANGED")
+	--eventFrame:RegisterEvent("PLAYER_EQUIPED_SPELLS_CHANGED")
 	eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 	eventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 	eventFrame:RegisterEvent("SPELL_UPDATE_COOLDOWN")

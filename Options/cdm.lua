@@ -985,6 +985,29 @@ local function CreateStateDropdown(iconSettingsTabs, iconSettings, scrollFrame, 
 	stateType:SetValue("ready")
 end
 
+local function GetProfileAnchorConfig(options, data, anchorIndex, isBuffBar)
+	local config
+	if isBuffBar then
+		options.buffBarsAnchorConfig = options.buffBarsAnchorConfig or {}
+		config = options.buffBarsAnchorConfig[anchorIndex]
+	else
+		options.anchorConfig = options.anchorConfig or {}
+		config = options.anchorConfig[anchorIndex]
+	end
+
+	if not config then
+		config = CopyTable(data)
+	end
+
+	if isBuffBar then
+		options.buffBarsAnchorConfig[anchorIndex] = config
+	else
+		options.anchorConfig[anchorIndex] = config
+	end
+
+	return config
+end
+
 local function SelectAnchor(widget, parentWidget, anchorIndex, anchorTabsTbl, mode)
 	widget:ReleaseChildren()
 
@@ -1012,31 +1035,8 @@ local function SelectAnchor(widget, parentWidget, anchorIndex, anchorTabsTbl, mo
 	end
 
 	local data = sourceData
-	local function GetProfileAnchorConfig()
-		local config
-		if isBuffBar then
-			options.buffBarsAnchorConfig = options.buffBarsAnchorConfig or {}
-			config = options.buffBarsAnchorConfig[anchorIndex]
-		else
-			options.anchorConfig = options.anchorConfig or {}
-			config = options.anchorConfig[anchorIndex]
-		end
-
-		if not config then
-			config = CopyTable(data)
-		end
-
-		if isBuffBar then
-			options.buffBarsAnchorConfig[anchorIndex] = config
-		else
-			options.anchorConfig[anchorIndex] = config
-		end
-
-		return config
-	end
-
 	if not isGlobal and sourceData.useGlobalProfileConfig then
-		data = GetProfileAnchorConfig()
+		data = GetProfileAnchorConfig(options, data, anchorIndex, isBuffBar)
 		isProfileConfig = true
 	end
 
@@ -1116,7 +1116,7 @@ local function SelectAnchor(widget, parentWidget, anchorIndex, anchorTabsTbl, mo
 		useGlobalProfileConfig:SetCallback("OnValueChanged", function(_, _, value)
 			sourceData.useGlobalProfileConfig = value
 			if value then
-				GetProfileAnchorConfig()
+				GetProfileAnchorConfig(options, sourceData, anchorIndex, isBuffBar)
 			end
 			ApplyModeConfigUpdate(anchorIndex, mode)
 
@@ -2107,6 +2107,8 @@ end
 local function CreateAnchorTabGroup(parent, frame, mode)
 	parent:ReleaseChildren()
 
+	local options = SCM.db.profile.options
+
 	local isGlobal = mode == "global"
 	local isBuffBar = mode == "buffbars"
 
@@ -2122,7 +2124,12 @@ local function CreateAnchorTabGroup(parent, frame, mode)
 	local sourceConfig = (isGlobal and SCM.globalAnchorConfig) or (isBuffBar and SCM.buffBarsAnchorConfig) or SCM.anchorConfig
 	local anchorTabsTbl = {}
 	for i, anchorConfig in ipairs(sourceConfig) do
-		tinsert(anchorTabsTbl, { value = i, text = anchorConfig.anchorName or ("Anchor " .. i) })
+		if not isGlobal and anchorConfig.useGlobalProfileConfig then
+			local profileAnchorConfig = GetProfileAnchorConfig(options, anchorConfig, i, isBuffBar)
+			tinsert(anchorTabsTbl, { value = i, text = profileAnchorConfig.anchorName or ("Anchor " .. i) })
+		else
+			tinsert(anchorTabsTbl, { value = i, text = anchorConfig.anchorName or ("Anchor " .. i) })
+		end
 	end
 
 	anchorTabs:SetTabs(anchorTabsTbl)

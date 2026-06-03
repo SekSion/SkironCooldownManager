@@ -533,7 +533,7 @@ local function OpenOptions()
 			anchorFrame.debugTexture:Hide()
 			anchorFrame.debugText:Hide()
 		end
-		SCM:ApplyAllCDManagerConfigs()
+		SCM.RefreshCooldownViewerData(true)
 		RunNextFrame(function()
 			SCM:RestoreBlizzardGlows()
 		end)

@@ -20,6 +20,14 @@ local function ApplyChargeAndApplicationStyle(child, options, fontPath)
 
 		if fontPath then
 			child.ChargeCount.Current:SetFont(fontPath, size, outline)
+			child.ChargeCount.Current:SetWordWrap(false)
+			child.ChargeCount.Current:SetNonSpaceWrap(false)
+			child.ChargeCount.Current:SetMaxLines(1)
+
+			local width = child.ChargeCount.Current:GetStringWidth()
+			if not issecretvalue(width) then
+				child.ChargeCount:SetWidth(width)
+			end
 		end
 
 		child.ChargeCount.Current:ClearAllPoints()
@@ -57,6 +65,14 @@ local function ApplyChargeAndApplicationStyle(child, options, fontPath)
 		local outline = rowConfig.applicationsFontOutline or options.chargeFontOutline or "OUTLINE"
 		if fontPath then
 			child.Applications.Applications:SetFont(fontPath, size, outline)
+			child.Applications.Applications:SetWordWrap(false)
+			child.Applications.Applications:SetNonSpaceWrap(false)
+			child.Applications.Applications:SetMaxLines(1)
+
+			local width = child.Applications.Applications:GetStringWidth()
+			if not issecretvalue(width) then
+				child.Applications:SetWidth(width)
+			end
 		end
 
 		child.Applications.Applications:ClearAllPoints()
@@ -170,8 +186,8 @@ local function ApplyCooldownStyle(child, options)
 			child.CooldownFlash:SetAlpha(0)
 		end
 
-		-- cooldownFrame:ClearAllPoints()
-		-- cooldownFrame:SetPoint("TOPLEFT", child, "TOPLEFT", 0, -0)
+		child.Cooldown:ClearAllPoints()
+		child.Cooldown:SetAllPoints()
 		cooldownFrame:SetPoint("BOTTOMRIGHT", child, "BOTTOMRIGHT", -SCM:PixelPerfect(), SCM:PixelPerfect())
 		cooldownFrame:SetSwipeTexture("Interface\\Buttons\\WHITE8x8")
 
@@ -340,15 +356,16 @@ function SCM:SkinBuffBar(child, config)
 
 		if options.buffBarContent == 2 then
 			bar:SetPoint("TOPLEFT", iconFrame, "TOPLEFT", 0, 0)
+			bar.BarBG:SetPoint("TOPLEFT", iconFrame, "TOPLEFT", 0, 0)
 		else
 			bar:SetPoint("TOPLEFT", iconFrame, "TOPRIGHT", -borderSize, 0)
+			bar.BarBG:SetPoint("TOPLEFT", iconFrame, "TOPRIGHT", -borderSize, 0)
 		end
 
 		bar:SetPoint("BOTTOMLEFT", iconFrame, "BOTTOMRIGHT", -borderSize, 0)
 		bar:SetHeight(iconFrame:GetHeight())
 		bar:SetStatusBarColor(foregroundColor.r, foregroundColor.g, foregroundColor.b, foregroundColor.a)
 		bar.Pip:SetAlpha(0)
-		bar.BarBG:SetPoint("TOPLEFT", iconFrame, "TOPRIGHT", -borderSize, 0)
 		bar.BarBG:SetPoint("BOTTOMLEFT", iconFrame, "BOTTOMRIGHT", -borderSize, 0)
 		bar.BarBG:SetPoint("RIGHT", bar, "RIGHT", 0, 0)
 		bar.BarBG:SetColorTexture(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a)
@@ -357,6 +374,16 @@ function SCM:SkinBuffBar(child, config)
 		local fontOutline = buffBarOptions.fontOutline or "OUTLINE"
 		bar.Name:SetFont(LSM:Fetch("font", buffBarOptions.font), buffBarOptions.fontSize, fontOutline)
 		bar.Duration:SetFont(LSM:Fetch("font", buffBarOptions.font), buffBarOptions.fontSize, fontOutline)
+
+		local nameColor = buffBarOptions.nameColor
+		bar.Name:ClearPointsOffset()
+		bar.Name:AdjustPointsOffset(buffBarOptions.nameXOffset, buffBarOptions.nameYOffset)
+		bar.Name:SetTextColor(nameColor.r, nameColor.g, nameColor.b, nameColor.a)
+
+		local durationColor = buffBarOptions.durationColor
+		bar.Duration:ClearPointsOffset()
+		bar.Duration:AdjustPointsOffset(buffBarOptions.durationXOffset, buffBarOptions.durationYOffset)
+		bar.Duration:SetTextColor(durationColor.r, durationColor.g, durationColor.b, durationColor.a)
 
 		bar.customBorder = bar.customBorder or CreateFrame("Frame", nil, bar, "BackdropTemplate")
 		bar.customBorder:SetFrameLevel(bar:GetFrameLevel() + 1)
@@ -423,12 +450,8 @@ function SCM:SkinBuffBar(child, config)
 		if iconFrame.Applications then
 			local applications = iconFrame.Applications
 			applications:SetWordWrap(false)
-			if applications.SetNonSpaceWrap then
-				applications:SetNonSpaceWrap(false)
-			end
-			if applications.SetMaxLines then
-				applications:SetMaxLines(1)
-			end
+			applications:SetNonSpaceWrap(false)
+			applications:SetMaxLines(1)
 
 			local size = rowConfig.applicationsFontSize or options.chargeFontSize
 			local outline = rowConfig.applicationsFontOutline or options.chargeFontOutline or "OUTLINE"

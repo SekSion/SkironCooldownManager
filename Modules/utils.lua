@@ -15,6 +15,8 @@ local CHILD_SCM_RESET_FIELDS = {
 	"SCMSpellID",
 	"SCMLinkedSpellID",
 	"SCMAuraInstanceID",
+	"SCMFakeAuraInstanceID",
+	"SCMUseFixedDuration",
 	"SCMOrder",
 	"SCMGroup",
 	"SCMGlobal",

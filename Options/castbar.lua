@@ -300,7 +300,7 @@ local function CastBar(self)
 	local width = AceGUI:Create("Slider")
 	width:SetRelativeWidth(0.33)
 	width:SetLabel("Width")
-	width:SetSliderValues(50, 600, 1)
+	width:SetSliderValues(50, 1000, 1)
 	width:SetValue(options.width or 270)
 	width:SetCallback("OnValueChanged", function(_, _, value)
 		options.width = value

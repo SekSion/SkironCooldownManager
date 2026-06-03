@@ -784,7 +784,7 @@ local function GetProgressValues(bar, segmentCount, currentValue, resourceSegmen
 		return segmentProgressValues
 	end
 
-	if bar.powerType == Enum.PowerType.Essence then
+	if bar.powerType == Enum.PowerType.Essence or bar.resourceKind == "destructionSoulShards" then
 		for segmentIndex = 1, segmentCount do
 			segmentProgressValues[segmentIndex] = Clamp(currentValue - (segmentIndex - 1), 0, 1)
 		end

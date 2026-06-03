@@ -1194,6 +1194,76 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 			SCM:SkinBuffBars()
 		end)
 		fontSettings:AddChild(fontOutline)
+
+		local nameColor = AceGUI:Create("ColorPicker")
+		nameColor:SetRelativeWidth(0.33)
+		nameColor:SetLabel("Name Color")
+		nameColor:SetHasAlpha(true)
+
+		local color = buffBarOptions.nameColor
+		nameColor:SetColor(color.r, color.g, color.b, color.a)
+		nameColor:SetCallback("OnValueChanged", function(self, event, r, g, b, a)
+			buffBarOptions.nameColor = { r = r, g = g, b = b, a = a }
+			SCM:SkinBuffBars()
+		end)
+		fontSettings:AddChild(nameColor)
+
+		local nameXOffset = AceGUI:Create("Slider")
+		nameXOffset:SetRelativeWidth(0.33)
+		nameXOffset:SetValue(buffBarOptions.nameXOffset or 0)
+		nameXOffset:SetLabel("Name X Offset")
+		nameXOffset:SetSliderValues(-100, 100, 0.1)
+		nameXOffset:SetCallback("OnValueChanged", function(_, _, value)
+			buffBarOptions.nameXOffset = value
+			SCM:SkinBuffBars()
+		end)
+		fontSettings:AddChild(nameXOffset)
+
+		local nameYOffset = AceGUI:Create("Slider")
+		nameYOffset:SetRelativeWidth(0.33)
+		nameYOffset:SetValue(buffBarOptions.nameYOffset or 0)
+		nameYOffset:SetLabel("Name Y Offset")
+		nameYOffset:SetSliderValues(-100, 100, 0.1)
+		nameYOffset:SetCallback("OnValueChanged", function(_, _, value)
+			buffBarOptions.nameYOffset = value
+			SCM:SkinBuffBars()
+		end)
+		fontSettings:AddChild(nameYOffset)
+
+		local durationColor = AceGUI:Create("ColorPicker")
+		durationColor:SetRelativeWidth(0.33)
+		durationColor:SetLabel("Duration Color")
+		durationColor:SetHasAlpha(true)
+
+		local color = buffBarOptions.durationColor
+		durationColor:SetColor(color.r, color.g, color.b, color.a)
+		durationColor:SetCallback("OnValueChanged", function(self, event, r, g, b, a)
+			buffBarOptions.durationColor = { r = r, g = g, b = b, a = a }
+			SCM:SkinBuffBars()
+		end)
+		fontSettings:AddChild(durationColor)
+
+		local durationXOffset = AceGUI:Create("Slider")
+		durationXOffset:SetRelativeWidth(0.33)
+		durationXOffset:SetValue(buffBarOptions.durationXOffset or 0)
+		durationXOffset:SetLabel("Duration X Offset")
+		durationXOffset:SetSliderValues(-100, 100, 0.1)
+		durationXOffset:SetCallback("OnValueChanged", function(_, _, value)
+			buffBarOptions.durationXOffset = value
+			SCM:SkinBuffBars()
+		end)
+		fontSettings:AddChild(durationXOffset)
+
+		local durationYOffset = AceGUI:Create("Slider")
+		durationYOffset:SetRelativeWidth(0.33)
+		durationYOffset:SetValue(buffBarOptions.durationYOffset or 0)
+		durationYOffset:SetLabel("Duration Y Offset")
+		durationYOffset:SetSliderValues(-100, 100, 0.1)
+		durationYOffset:SetCallback("OnValueChanged", function(_, _, value)
+			buffBarOptions.durationYOffset = value
+			SCM:SkinBuffBars()
+		end)
+		fontSettings:AddChild(durationYOffset)
 	end
 
 	tabWidget:DoLayout()
