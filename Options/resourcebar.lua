@@ -722,7 +722,7 @@ local function AddBarSettings(parent, title, settings, includeManaRoleSettings, 
 	parent:AddChild(textSettings)
 
 	local showValues = AceGUI:Create("CheckBox")
-	showValues:SetRelativeWidth(0.33)
+	showValues:SetRelativeWidth(0.25)
 	showValues:SetLabel("Show Text")
 	showValues:SetValue(settings.showValues)
 	showValues:SetCallback("OnValueChanged", function(_, _, value)
@@ -731,9 +731,19 @@ local function AddBarSettings(parent, title, settings, includeManaRoleSettings, 
 	end)
 	textSettings:AddChild(showValues)
 
+	local showValues = AceGUI:Create("CheckBox")
+	showValues:SetRelativeWidth(0.25)
+	showValues:SetLabel("Show Percent Sign")
+	showValues:SetValue(settings.showPercentageSign)
+	showValues:SetCallback("OnValueChanged", function(_, _, value)
+		settings.showPercentageSign = value
+		RefreshResourceBars()
+	end)
+	textSettings:AddChild(showValues)
+
 	local font = AceGUI:Create("LSM30_Font")
 	font:SetLabel("Text Font")
-	font:SetRelativeWidth(0.33)
+	font:SetRelativeWidth(0.25)
 	font:SetList(LSM:HashTable("font"))
 	font:SetValue(settings.font)
 	font:SetCallback("OnValueChanged", function(self, _, value)
@@ -744,7 +754,7 @@ local function AddBarSettings(parent, title, settings, includeManaRoleSettings, 
 	textSettings:AddChild(font)
 
 	local textOutline = AceGUI:Create("Dropdown")
-	textOutline:SetRelativeWidth(0.33)
+	textOutline:SetRelativeWidth(0.25)
 	textOutline:SetLabel("Outline")
 	textOutline:SetList(Constants.TextOutline, Constants.TextOutlineSorted)
 	textOutline:SetValue(settings.textOutline)

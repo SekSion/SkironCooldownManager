@@ -59,6 +59,7 @@ local function RefreshCooldownViewerData(releaseCustomIcons)
 	SCM:InvalidateAnchorLinks()
 	SCM:UpdateCooldownInfo(true)
 	SCM:UpdateDB()
+	SCM:RefreshResourceBarConfig()
 
 	if releaseCustomIcons then
 		SCM:ResetCooldownViewerRuntimeState()
@@ -260,8 +261,25 @@ function SCM:TRAIT_CONFIG_UPDATED()
 	end)
 end
 
+local function ClearLayoutPoints()
+	if InCombatLockdown() then
+		return
+	end
+
+
+	for _, anchorFrame in pairs(SCM.anchorFrames) do
+		anchorFrame:ClearAllPoints()
+	end
+
+	SCM_ResourceBarContainer:ClearAllPoints()
+	SCM_SecondaryResourceBar:ClearAllPoints()
+	SCM_PrimaryResourceBar:ClearAllPoints()
+	SCM_CastBar:ClearAllPoints()
+end
+
 function SCM:ACTIVE_PLAYER_SPECIALIZATION_CHANGED()
 	SCM:ResetCooldownViewerRuntimeState()
+	ClearLayoutPoints()
 
 	C_Timer.After(0.5, function()
 		RefreshCooldownViewerData(true)
