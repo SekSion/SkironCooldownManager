@@ -62,12 +62,13 @@ local iconTypeTabs = {
 		{ value = "items", text = "Items" },
 	},
 	timer = {},
+	bloodlust = { { value = "glow", text = "Glow" } },
 	slot = {
 		{ value = "filter", text = "Filter" },
 	},
 }
 for iconType, options in pairs(iconTypeTabs) do
-	if iconType ~= "all" then
+	if iconType ~= "all" and iconType ~= "bloodlust" then
 		for i = #iconTypeTabs.all, 1, -1 do
 			tinsert(options, 1, iconTypeTabs.all[i])
 		end
@@ -209,6 +210,15 @@ local customButtonConfigs = {
 			GameTooltip_SetTitle(tooltip, MenuUtil.GetElementText(elementDescription))
 			GameTooltip_AddInstructionLine(tooltip, "Timers can only be created based on successful casts.")
 		end,
+	},
+	{
+		text = "Bloodlust",
+		configID = 2825,
+		iconType = "bloodlust",
+		buildIconData = BuildSpellIconData,
+		config = {
+			duration = 40,
+		},
 	},
 	{
 		text = "Empty",
@@ -1306,7 +1316,7 @@ local function SelectAnchor(widget, parentWidget, anchorIndex, anchorTabsTbl, mo
 			if config.anchorGroup == anchorIndex then
 				local iconType = config.iconType or (config.spellID and "spell") or "item"
 				local texture
-				if iconType == "spell" or iconType == "timer" then
+				if iconType == "spell" or iconType == "timer" or iconType == "bloodlust" then
 					texture = config.spellID and C_Spell.GetSpellTexture(config.spellID)
 				elseif iconType == "slot" then
 					texture = config.slotID and GetInventoryItemTexture("player", config.slotID) or 134400
