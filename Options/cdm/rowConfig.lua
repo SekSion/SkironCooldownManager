@@ -1,3 +1,25 @@
+local SCM = select(2, ...)
+local Options = SCM.Options
+local Utils = SCM.Utils
+
+Options.RowConfig = {}
+
+function SCM:AddRow(anchorIndex)
+	local nextIndex = #SCM.anchorConfig[anchorIndex].rowConfig + 1
+	self.anchorConfig[anchorIndex].rowConfig[nextIndex] = {
+		size = 40,
+		limit = 8,
+	}
+
+	return nextIndex
+end
+
+function SCM:RemoveRow(anchorIndex, rowIndex)
+	if self.anchorConfig[anchorIndex].rowConfig[rowIndex] then
+		tremove(self.anchorConfig[anchorIndex].rowConfig, rowIndex)
+	end
+end
+
 local function SelectAdvancedRowSettings(self, tabGroup, rowConfig, rowIndex, anchorIndex, mode, options, data)
 	self:ReleaseChildren()
 
@@ -212,7 +234,7 @@ local function SelectAdvancedRowSettings(self, tabGroup, rowConfig, rowIndex, an
 	end
 end
 
-local function SelectRow(widget, rowWidget, parentWidget, scrollFrame, data, anchorIndex, rowIndex, rowTabsTbl, mode, options, isProfileConfig)
+function Options.RowConfig.SelectRow(widget, rowWidget, parentWidget, scrollFrame, data, anchorIndex, rowIndex, rowTabsTbl, mode, options, isProfileConfig)
 	widget:ReleaseChildren()
 
 	local isGlobal = mode == "global"
