@@ -27,9 +27,7 @@ local function TriggerBloodlustTimers()
 end
 
 local function OnBloodlustUnitAura(_, _, unit, updateInfo)
-	if unit ~= "player" or not updateInfo or not updateInfo.addedAuras then
-		return
-	end
+	if unit ~= "player" or updateInfo.isFullUpdate or not updateInfo.addedAuras then return end
 
 	for _, auraInfo in pairs(updateInfo.addedAuras) do
 		if auraInfo and auraInfo.auraInstanceID then
