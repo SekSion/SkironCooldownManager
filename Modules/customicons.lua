@@ -57,7 +57,7 @@ function CustomIcons.GetCustomIconFrames(config)
 		return
 	end
 
-	if iconType == "spell" or iconType == "timer" then
+	if iconType == "spell" or iconType == "timer" or iconType == "bloodlust" then
 		return CustomSpellFrames
 	end
 
@@ -254,7 +254,7 @@ local function RequestCustomItemDataLoad(itemID, requestedItemIDs)
 end
 
 local function SetCustomIconCountText(frame, iconType, config)
-	if iconType == "spell" or iconType == "slot" or iconType == "timer" then
+	if iconType == "spell" or iconType == "slot" or iconType == "timer" or iconType == "bloodlust" then
 		frame.ChargeCount.Current:SetText("")
 		frame.ChargeCount.Current:Hide()
 		return
@@ -332,7 +332,7 @@ end
 
 local function GetActiveCustomTimer(frame, iconType, config, now)
 	local duration
-	if iconType == "spell" or iconType == "timer" then
+	if iconType == "spell" or iconType == "timer" or iconType == "bloodlust" then
 		duration = config.duration
 	end
 
@@ -667,7 +667,7 @@ local function ShouldLoadCustomIcon(config)
 end
 
 local function GetCustomIconTexture(config, iconType, frame)
-	if (iconType == "spell" or iconType == "timer") and config.spellID then
+	if (iconType == "spell" or iconType == "timer" or iconType == "bloodlust") and config.spellID then
 		return C_Spell.GetSpellTexture(config.spellID)
 	end
 
@@ -792,7 +792,7 @@ end
 
 local function CacheCustomIconEntry(id, config, isGlobal, slotItemID)
 	local iconType = GetIconType(config)
-	if (iconType == "spell" or iconType == "timer") and config.spellID then
+	if (iconType == "spell" or iconType == "timer" or iconType == "bloodlust") and config.spellID then
 		local entries = Cache.cachedCustomSpellEntriesBySpellID[config.spellID]
 		if not entries then
 			entries = {}
@@ -1245,7 +1245,7 @@ function SCM:AddCustomIcon(anchorGroup, iconType, configID, order, uniqueID, isG
 	configTable[uniqueID] = {
 		id = uniqueID,
 		iconType = iconType,
-		spellID = (iconType == "spell" or iconType == "timer") and configID or nil,
+		spellID = (iconType == "spell" or iconType == "timer" or iconType == "bloodlust") and configID or nil,
 		itemID = iconType == "item" and configID or nil,
 		slotID = iconType == "slot" and configID or nil,
 		anchorGroup = anchorGroup,
