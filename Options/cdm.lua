@@ -383,7 +383,7 @@ local function CreateAddSpellDropdown(owner, rootDescription, scrollFrame, ancho
 		CreateCustomIconButtons(customButton, scrollFrame, anchorIndex, true, customButtonConfigs)
 
 		local presetButton = rootDescription:CreateButton("Presets")
-		CreateCustomIconButtons(presetButton, scrollFrame, anchorIndex, false, presetButtonConfigs)
+		CreateCustomIconButtons(presetButton, scrollFrame, anchorIndex, true, presetButtonConfigs)
 		return
 	end
 
