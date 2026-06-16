@@ -97,8 +97,8 @@ local function ApplyCooldownFont(cooldownFrame, options)
 				originalCooldownFont = { cooldownFontString:GetFont() }
 			end
 
-			local parent = cooldownFrame:GetParent()
-			if parent.SCMWidth and parent.SCMHeight then
+			local parent = cooldownFrame.SCMParent or cooldownFrame:GetParent()
+			if parent and parent.SCMWidth and parent.SCMHeight then
 				local width, height = parent.SCMWidth, parent.SCMHeight
 				local iconSize = min(width, height)
 				local rowConfig = parent.SCMRowConfig
@@ -129,14 +129,18 @@ local function ApplyCooldownFont(cooldownFrame, options)
 		end
 	end
 
-	local parent = cooldownFrame:GetParent()
-	if parent.SCMConfig then
+	local parent = cooldownFrame.SCMParent or cooldownFrame:GetParent()
+	if parent and parent.SCMConfig then
 		cooldownFrame:SetHideCountdownNumbers(parent.SCMConfig.hideCountdownNumbers)
 	end
 end
 
 local function ApplyCooldownSwipe(cooldownFrame, options)
-	local parent = cooldownFrame:GetParent()
+	local parent = cooldownFrame.SCMParent or cooldownFrame:GetParent()
+	if not parent then
+		return
+	end
+
 	local forceActiveSwipe = parent.SCMConfig and parent.SCMConfig.forceActiveSwipe
 
 	if parent.auraInstanceID or parent.SCMFakeAuraInstanceID or parent.SCMBuffOptions then
@@ -186,9 +190,11 @@ local function ApplyCooldownStyle(child, options)
 			child.CooldownFlash:SetAlpha(0)
 		end
 
-		child.Cooldown:ClearAllPoints()
-		child.Cooldown:SetAllPoints()
-		cooldownFrame:SetPoint("BOTTOMRIGHT", child, "BOTTOMRIGHT", -SCM:PixelPerfect(), SCM:PixelPerfect())
+		cooldownFrame:SetParent(child.SCMCooldownParent)
+		cooldownFrame.SCMParent = child
+		cooldownFrame:ClearAllPoints()
+		cooldownFrame:SetPoint("TOPLEFT", child.SCMCooldownParent, "TOPLEFT", -5, 5)
+		cooldownFrame:SetPoint("BOTTOMRIGHT", child.SCMCooldownParent, "BOTTOMRIGHT", 5, -5)
 		cooldownFrame:SetSwipeTexture("Interface\\Buttons\\WHITE8x8")
 
 		hooksecurefunc(cooldownFrame, "SetCooldown", OnSetCooldown)
@@ -241,11 +247,12 @@ function SCM:SkinChild(child, childConfig)
 	local borderSize = options.borderSize
 	local borderColor = options.borderColor
 
-	if not child.SCMSkinned or (child.SCMSkinned and self.OptionsFrame ~= nil and self.OptionsFrame:IsShown()) then
+	if not child.SCMSkinned or (child.SCMSkinned and self.OptionsFrame and self.OptionsFrame:IsShown()) then
 		child.SCMSkinned = true
 
 		child.customBorder = child.customBorder or CreateFrame("Frame", nil, child, "BackdropTemplate")
 		child.customBorder:SetFrameLevel(child:GetFrameLevel() + 1)
+		child.customBorder:ClearAllPoints()
 		child.customBorder:SetAllPoints(child)
 		child.customBorder:SetBackdrop({
 			edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -263,6 +270,18 @@ function SCM:SkinChild(child, childConfig)
 			region:SetTexelSnappingBias(0)
 			region:SetSnapToPixelGrid(false)
 		end
+
+		child.SCMCooldownParent = child.SCMCooldownParent or CreateFrame("Frame", nil, child)
+		child.SCMCooldownParent:ClearAllPoints()
+
+		--TODO: How to get the cooldown frame aligned with the visible part of a frame? Please tell me
+		if (childConfig and childConfig.expCooldownThing)  then
+			child.SCMCooldownParent:SetAllPoints(child)
+		else
+			child.SCMCooldownParent:SetPoint("TOPLEFT", child, "TOPLEFT", 0, 0)
+			child.SCMCooldownParent:SetPoint("BOTTOMRIGHT", child, "BOTTOMRIGHT", -SCM:PixelPerfectSize(1), SCM:PixelPerfectSize(1))
+		end
+		child.SCMCooldownParent:SetClipsChildren(true)
 
 		local textureRegion
 		for _, region in ipairs({ child:GetRegions() }) do

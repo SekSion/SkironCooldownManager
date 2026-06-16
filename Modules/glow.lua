@@ -46,6 +46,8 @@ function SCM:StartCustomGlow(child)
 			"SCM",
 			1
 		)
+	elseif options.glowType == "Button" then
+		LibCustomGlow.ButtonGlow_Start(child, color, glowTypeOptions.frequency)
 	end
 
 	activeGlows[child] = true
@@ -58,6 +60,8 @@ function SCM:StopCustomGlow(child)
 		LibCustomGlow.AutoCastGlow_Stop(child, "SCM")
 	elseif child.SCMGlow == "Pixel" then
 		LibCustomGlow.PixelGlow_Stop(child, "SCM")
+	elseif child.SCMGlow == "Button" then
+		LibCustomGlow.ButtonGlow_Stop(child)
 	end
 
 	child.SCMGlow = nil
@@ -92,7 +96,7 @@ end
 
 function SCM:RestoreBlizzardGlows()
 	local options = self.db.profile.options
-	for _, viewerName in ipairs({"EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer"}) do
+	for _, viewerName in ipairs({ "EssentialCooldownViewer", "UtilityCooldownViewer", "BuffIconCooldownViewer" }) do
 		local viewer = _G[viewerName]
 		if viewer then
 			for _, child in ipairs({ viewer:GetChildren() }) do

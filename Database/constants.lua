@@ -262,6 +262,16 @@ Constants.SpecIDs = {
 	73,
 }
 
+Constants.SatedDebuffs = {
+	[57723] = true,
+	[57724] = true,
+	[80354] = true,
+	[95809] = true,
+	[160455] = true,
+	[264689] = true,
+	[390435] = true,
+}
+
 Constants.ClassSecondaryPower = {
 	["DEATHKNIGHT"] = {
 		resourceKind = "runes",

@@ -543,6 +543,7 @@ local function ResetResourceBar(bar)
 
 	bar.SCMSegmentedDisplay = nil
 	bar.SCMConfiguredSegmentCount = nil
+	bar.SCMActiveSegmentCount = nil
 
 	bar:GetStatusBarTexture():SetAlpha(1)
 
@@ -799,24 +800,7 @@ local function GetProgressValues(bar, segmentCount, currentValue, resourceSegmen
 	return segmentProgressValues
 end
 
-local function UpdateSegments(bar, maxValue, currentValue, resourceSegmentValues)
-	local segmentCount = GetNumSegments(bar, maxValue)
-	if not HasSegments(bar, segmentCount) then
-		bar.SCMSegmentedDisplay = nil
-		HideRegions(bar.SegmentFillBars)
-		HideRegions(bar.RuneSegmentBars)
-		bar:GetStatusBarTexture():SetAlpha(1)
-		return
-	end
-
-	bar.SCMSegmentedDisplay = true
-	bar.segmentCount = segmentCount
-	bar:GetStatusBarTexture():SetAlpha(0)
-	HideRegions(bar.RuneSegmentBars)
-
-	local barOptions = bar.barOptions
-	local segmentBars = CreateSegments(bar, segmentCount)
-	local texturePath = bar.SCMTexturePath or LSM:Fetch("statusbar", barOptions.texture)
+local function UpdateSegmentValues(bar, segmentBars, segmentCount, currentValue, resourceSegmentValues)
 	local r, g, b = GetPowerColor(bar.powerToken, bar.powerType)
 	local runeRechargeColor = bar.resourceKind == "runes" and SCM.resourceBarConfig.runeRechargeColor
 	local overflowR, overflowG, overflowB = CHARGED_COMBO_POINT_COLOR.r, CHARGED_COMBO_POINT_COLOR.g, CHARGED_COMBO_POINT_COLOR.b
@@ -830,23 +814,9 @@ local function UpdateSegments(bar, maxValue, currentValue, resourceSegmentValues
 
 	local chargedSegments = GetChargedSegmentMap(bar, segmentCount, currentValue)
 	local segmentProgressValues = GetProgressValues(bar, segmentCount, currentValue, resourceSegmentValues)
-	local segmentWidth, segmentHeight = GetSegmentBarSize(bar, segmentCount)
 
 	for segmentIndex = 1, segmentCount do
 		local segmentBar = segmentBars[segmentIndex]
-		segmentBar:ClearAllPoints()
-		segmentBar:SetStatusBarTexture(texturePath)
-		segmentBar:GetStatusBarTexture():SetTexelSnappingBias(0)
-		segmentBar:GetStatusBarTexture():SetSnapToPixelGrid(false)
-		segmentBar:SetPoint("LEFT", (segmentIndex - 1) * segmentWidth, 0)
-		segmentBar:SetWidth(segmentWidth)
-		segmentBar:SetHeight(segmentHeight)
-		if barOptions.textOnly then
-			segmentBar:GetStatusBarTexture():Hide()
-		else
-			segmentBar:GetStatusBarTexture():Show()
-		end
-
 		local segmentR, segmentG, segmentB = r, g, b
 		local segmentProgress = segmentProgressValues[segmentIndex] or 0
 		if runeRechargeColor and segmentProgress > 0 and segmentProgress < 1 then
@@ -861,8 +831,46 @@ local function UpdateSegments(bar, maxValue, currentValue, resourceSegmentValues
 
 		segmentBar:SetStatusBarColor(segmentR, segmentG, segmentB)
 		segmentBar:SetValue(segmentProgress)
+	end
+end
+
+local function UpdateSegments(bar, maxValue, currentValue, resourceSegmentValues)
+	local segmentCount = GetNumSegments(bar, maxValue)
+	if not HasSegments(bar, segmentCount) or (bar.barOptions and bar.barOptions.textOnly) then
+		bar.SCMSegmentedDisplay = nil
+		bar.SCMActiveSegmentCount = nil
+		HideRegions(bar.SegmentFillBars)
+		HideRegions(bar.RuneSegmentBars)
+		bar:GetStatusBarTexture():SetAlpha(1)
+		return
+	end
+
+	bar.SCMSegmentedDisplay = true
+	bar.segmentCount = segmentCount
+	bar.SCMActiveSegmentCount = segmentCount
+	bar:GetStatusBarTexture():SetAlpha(0)
+	HideRegions(bar.RuneSegmentBars)
+
+	local barOptions = bar.barOptions
+	local segmentBars = CreateSegments(bar, segmentCount)
+	local texturePath = bar.SCMTexturePath or LSM:Fetch("statusbar", barOptions.texture)
+	local segmentWidth, segmentHeight = GetSegmentBarSize(bar, segmentCount)
+
+	for segmentIndex = 1, segmentCount do
+		local segmentBar = segmentBars[segmentIndex]
+
+		segmentBar:ClearAllPoints()
+		segmentBar:SetStatusBarTexture(texturePath)
+		segmentBar:GetStatusBarTexture():SetTexelSnappingBias(0)
+		segmentBar:GetStatusBarTexture():SetSnapToPixelGrid(false)
+		segmentBar:SetPoint("LEFT", (segmentIndex - 1) * segmentWidth, 0)
+		segmentBar:SetWidth(segmentWidth)
+		segmentBar:SetHeight(segmentHeight)
+		segmentBar:GetStatusBarTexture():Show()
 		segmentBar:Show()
 	end
+
+	UpdateSegmentValues(bar, segmentBars, segmentCount, currentValue, resourceSegmentValues)
 
 	for segmentIndex = segmentCount + 1, #segmentBars do
 		segmentBars[segmentIndex]:Hide()
@@ -1059,17 +1067,7 @@ local function OnResourceBarEvent(bar, event)
 		return
 	end
 
-	local maxValue = controller:RefreshBarDisplay(bar)
-	local primaryHeightChanged, secondaryHeightChanged = controller:UpdateBarLayout()
-	local isPrimaryBar = bar == controller.PrimaryBar
-	local isSecondaryBar = bar == controller.SecondaryBar
-	local heightChanged = (isPrimaryBar and primaryHeightChanged) or (isSecondaryBar and secondaryHeightChanged)
-
-	if event == "UNIT_MAXPOWER" or heightChanged then
-		RefreshBarTicks(bar, maxValue)
-	end
-
-	controller:UpdateContainerShownState()
+	controller:UpdateBarDisplay(bar)
 	controller:UpdateRefreshState()
 end
 
@@ -1130,6 +1128,38 @@ function SCMResourceBarControllerMixin:UpdateActiveAnchorFrame(anchor)
 	return activeAnchor
 end
 
+function SCMResourceBarControllerMixin:HookAnchorWidthRefresh(anchor)
+	if not anchor or anchor.SCMProxyGroup then
+		return
+	end
+
+	self.SCMResourceBarHooks = self.SCMResourceBarHooks or {}
+	if self.SCMResourceBarHooks[anchor] then
+		return
+	end
+
+	self.SCMResourceBarHooks[anchor] = true
+	anchor:HookScript("OnSizeChanged", function(changedAnchor)
+		local controller = _G[RESOURCE_BAR_FRAME_NAME]
+		if not (controller and controller.SCMResourceBarInitialized and controller.SCMActiveAnchorFrame == changedAnchor) then
+			return
+		end
+
+		local generalBarOptions = controller.barOptions or SCM.resourceBarConfig
+		if not (generalBarOptions and generalBarOptions.enabled) then
+			return
+		end
+
+		local primaryBarOptions = controller.primaryBarOptions or generalBarOptions.primaryBar
+		local secondaryBarOptions = controller.secondaryBarOptions or generalBarOptions.secondaryBar
+		local primaryMatches = primaryBarOptions and primaryBarOptions.enabled and primaryBarOptions.matchAnchorWidth and not controller.PrimaryBar:IsProtected()
+		local secondaryMatches = secondaryBarOptions and secondaryBarOptions.enabled and secondaryBarOptions.matchAnchorWidth and not controller.SecondaryBar:IsProtected()
+		if primaryMatches or secondaryMatches then
+			SCM:RefreshResourceBarConfig()
+		end
+	end)
+end
+
 function SCMResourceBarControllerMixin:ApplyFrameWidthOptions(bar)
 	local specificBarOptions = bar.barOptions
 	local generalBarOptions = self.barOptions
@@ -1146,21 +1176,8 @@ function SCMResourceBarControllerMixin:ApplyFrameWidthOptions(bar)
 		bar:SetWidth(desiredWidth)
 		local widthChanged = previousWidth ~= (bar:GetWidth() or 0)
 
-		bar.SCMResourceBarHooks = bar.SCMResourceBarHooks or {}
-		if not anchor.SCMProxyGroup and not bar.SCMResourceBarHooks[anchor] then
-			bar.SCMResourceBarHooks[anchor] = true
-			anchor:HookScript("OnSizeChanged", function(changedAnchor)
-				local barOptions = bar.barOptions
-				local controller = bar.Controller
-				local generalBarOptions = controller and controller.barOptions or SCM.resourceBarConfig
-				if bar:IsProtected() or not (generalBarOptions.enabled and barOptions and barOptions.enabled and barOptions.matchAnchorWidth) then
-					return
-				end
-
-				if controller and controller.SCMActiveAnchorFrame == changedAnchor then
-					SCM:RefreshResourceBarConfig()
-				end
-			end)
+		if specificBarOptions.matchAnchorWidth then
+			self:HookAnchorWidthRefresh(anchor)
 		end
 
 		--No idea whats going in with these fucking pixels. BRB taking a math class
@@ -1194,8 +1211,8 @@ function SCMResourceBarControllerMixin:OnUpdate(elapsed)
 	end
 
 	self.totalElapsed = 0
-	self:RefreshBarDisplay(self.PrimaryBar)
-	self:RefreshBarDisplay(self.SecondaryBar)
+	self:UpdateBarDisplay(self.PrimaryBar)
+	self:UpdateBarDisplay(self.SecondaryBar)
 	self:UpdateRefreshState()
 end
 
@@ -1254,8 +1271,8 @@ function SCMResourceBarControllerMixin:RefreshResourceBars(refreshTicks, options
 		local refreshPrimaryTicks = refreshTicks or primaryResourceChanged or primaryWidthChanged or primaryHeightChanged
 		local refreshSecondaryTicks = refreshTicks or secondaryResourceChanged or secondaryWidthChanged or secondaryHeightChanged
 
-		self:RefreshBarDisplay(self.PrimaryBar, refreshPrimaryTicks, true, optionsChanged)
-		self:RefreshBarDisplay(self.SecondaryBar, refreshSecondaryTicks, true, optionsChanged)
+		self:ReconfigureBarDisplay(self.PrimaryBar, refreshPrimaryTicks, optionsChanged)
+		self:ReconfigureBarDisplay(self.SecondaryBar, refreshSecondaryTicks, optionsChanged)
 		self:UpdateContainerShownState()
 		self:UpdateRefreshState()
 
@@ -1409,19 +1426,95 @@ function SCMResourceBarControllerMixin:ConfigureSecondaryBar()
 	return ConfigureBarForResource(self.SecondaryBar, secondaryResource)
 end
 
-function SCMResourceBarControllerMixin:RefreshBarDisplay(bar, refreshTicks, skipWidthOptions, optionsChanged)
+function SCMResourceBarControllerMixin:UpdateBarDisplay(bar, currentValue, maxValue, displayValue, resourceSegmentValues, isFullUpdate)
+	if not bar.powerToken or not bar:IsShown() then
+		return
+	end
+
+	if not isFullUpdate then
+		currentValue, maxValue, displayValue, resourceSegmentValues = GetCurrentPowerValue(bar.resourceKind, bar.powerType, bar.spellID, bar.segmentCount)
+	end
+
+	if bar.resourceKind ~= "spellCharges" then
+		displayValue = displayValue or currentValue
+	end
+
+	bar:SetMinMaxValues(0, maxValue)
+	bar:SetValue(currentValue)
+
+	if not isFullUpdate and bar.SCMSegmentedDisplay and bar.SegmentFillBars then
+		local segmentCount = bar.SCMActiveSegmentCount
+		if segmentCount and segmentCount > 0 then
+			UpdateSegmentValues(bar, bar.SegmentFillBars, segmentCount, currentValue, resourceSegmentValues)
+		end
+	end
+
+	local staggerPercent
+	local overrideColor = bar.SCMIsPrimaryResourceBar and SCM.primaryResourceBarColorOverride
+	if overrideColor then
+		bar:SetStatusBarColor(overrideColor.r, overrideColor.g, overrideColor.b)
+	elseif bar.resourceKind == "stagger" then
+		staggerPercent = UpdateStaggerBarColor(bar, currentValue, maxValue, self.barOptions)
+	else
+		local r, g, b = GetPowerColor(bar.powerToken, bar.powerType)
+		bar:SetStatusBarColor(r, g, b)
+	end
+
+	local text = bar.Text
+	if not text then
+		return
+	end
+
+	local barOptions = bar.barOptions
+	local textValue = text.Value
+	local overrideText = bar.SCMIsPrimaryResourceBar and SCM.primaryResourceBarTextOverride
+	if overrideText then
+		textValue:SetText(overrideText)
+		return
+	end
+
+	if bar.resourceKind == "spellCharges" then
+		textValue:SetText(displayValue)
+		return
+	end
+
+	if bar.resourceKind == "vengeanceSoulFragments" then
+		textValue:SetText(tostring(displayValue))
+		return
+	end
+
+	if bar.resourceKind == "stagger" and self.barOptions.staggerDisplayAsPercent then
+		staggerPercent = staggerPercent or (not issecretvalue(maxValue) and not issecretvalue(currentValue) and (maxValue > 0 and currentValue / maxValue or 0)) or 0
+
+		if barOptions.showPercentageSign then
+			textValue:SetText(floor(staggerPercent * 100 + 0.5) .. "%")
+		else
+			textValue:SetText(floor(staggerPercent * 100 + 0.5))
+		end
+	elseif bar.powerType == Enum.PowerType.Mana then
+		local manaPercent = UnitPowerPercent("player", bar.powerType, false, CurveConstants.ScaleTo100)
+
+		if barOptions.showPercentageSign then
+			textValue:SetText(string.format("%d%%", manaPercent))
+		else
+			textValue:SetText(string.format("%d", manaPercent))
+		end
+	else
+		textValue:SetText(AbbreviateLargeNumbers(displayValue))
+	end
+
+	return
+end
+
+function SCMResourceBarControllerMixin:ReconfigureBarDisplay(bar, refreshTicks, optionsChanged)
 	if not bar.powerToken then
 		HideResourceBarSpark(bar)
 		return
 	end
 
 	local currentValue, maxValue, displayValue, resourceSegmentValues = GetCurrentPowerValue(bar.resourceKind, bar.powerType, bar.spellID, bar.segmentCount)
-	local missingValues = maxValue == nil
-	if bar.resourceKind ~= "spellCharges" then
-		missingValues = missingValues or currentValue == nil
-	end
 
-	if missingValues then
+	if not maxValue or (bar.resourceKind ~= "spellCharges" and not currentValue) then
 		if bar.resourceKind == "spellCharges" then
 			HideRegions(bar.SegmentFillBars)
 			HideRegions(bar.RuneSegmentBars)
@@ -1430,38 +1523,36 @@ function SCMResourceBarControllerMixin:RefreshBarDisplay(bar, refreshTicks, skip
 		else
 			UpdateSegments(bar)
 		end
+
 		if refreshTicks then
 			RefreshBarTicks(bar)
 		end
+
 		HideResourceBarSpark(bar)
 		bar:Hide()
+
 		return
 	end
 
-	if bar.resourceKind ~= "spellCharges" and displayValue == nil then
-		displayValue = currentValue
-	end
-	bar:SetMinMaxValues(0, maxValue)
-	bar:SetValue(currentValue)
-	if not skipWidthOptions then
-		self:UpdateActiveAnchorFrame(self.barOptions.anchorFrame or DEFAULT_RESOURCE_BAR_ANCHOR)
-	end
-	local widthChanged = not skipWidthOptions and self:ApplyFrameWidthOptions(bar)
+	bar:Show()
+	self:UpdateBarDisplay(bar, currentValue, maxValue, displayValue, resourceSegmentValues, true)
+
 	if bar.resourceKind == "spellCharges" then
 		bar.SCMSegmentedDisplay = nil
+		bar.SCMActiveSegmentCount = nil
 		HideRegions(bar.SegmentFillBars)
 		HideRegions(bar.RuneSegmentBars)
 		bar:GetStatusBarTexture():SetAlpha(1)
 		UpdateSpellChargeRecharge(bar, resourceSegmentValues)
 	elseif bar.resourceKind == "vengeanceSoulFragments" then
 		bar.SCMSegmentedDisplay = nil
+		bar.SCMActiveSegmentCount = nil
 		HideRegions(bar.SegmentFillBars)
 		bar:GetStatusBarTexture():SetAlpha(1)
 	else
 		HideRechargeSegment(bar)
 		UpdateSegments(bar, maxValue, currentValue, resourceSegmentValues)
 	end
-	bar:Show()
 
 	local spark = bar.Spark
 	local barOptions = bar.barOptions
@@ -1495,66 +1586,9 @@ function SCMResourceBarControllerMixin:RefreshBarDisplay(bar, refreshTicks, skip
 		HideResourceBarSpark(bar)
 	end
 
-	if refreshTicks or widthChanged then
+	if refreshTicks then
 		RefreshBarTicks(bar, maxValue)
 	end
-
-	local staggerPercent
-	local overrideColor = bar.SCMIsPrimaryResourceBar and SCM.primaryResourceBarColorOverride
-	if overrideColor then
-		bar:SetStatusBarColor(overrideColor.r, overrideColor.g, overrideColor.b)
-	elseif bar.resourceKind == "stagger" then
-		staggerPercent = UpdateStaggerBarColor(bar, currentValue, maxValue, self.barOptions)
-	end
-
-	local text = bar.Text
-	if not text then
-		return maxValue
-	end
-
-	local textValue = text.Value
-	local overrideText = bar.SCMIsPrimaryResourceBar and SCM.primaryResourceBarTextOverride
-	if overrideText ~= nil then
-		textValue:SetText(overrideText)
-		return maxValue
-	end
-
-	if bar.resourceKind == "spellCharges" then
-		textValue:SetText(displayValue)
-		return maxValue
-	end
-
-	if bar.resourceKind == "vengeanceSoulFragments" then
-		textValue:SetText(tostring(displayValue))
-		return maxValue
-	end
-
-	if not displayValue then
-		textValue:SetText("")
-		return maxValue
-	end
-
-	if bar.resourceKind == "stagger" and self.barOptions.staggerDisplayAsPercent then
-		staggerPercent = staggerPercent or (not issecretvalue(maxValue) and not issecretvalue(currentValue) and (maxValue > 0 and currentValue / maxValue or 0)) or 0
-
-		if barOptions.showPercentageSign then
-			textValue:SetText(floor(staggerPercent * 100 + 0.5) .. "%")
-		else
-			textValue:SetText(floor(staggerPercent * 100 + 0.5))
-		end
-	elseif bar.powerType == Enum.PowerType.Mana then
-		local manaPercent = UnitPowerPercent("player", bar.powerType, false, CurveConstants.ScaleTo100)
-
-		if barOptions.showPercentageSign then
-			textValue:SetText(string.format("%d%%", manaPercent))
-		else
-			textValue:SetText(string.format("%d", manaPercent))
-		end
-	else
-		textValue:SetText(AbbreviateLargeNumbers(displayValue))
-	end
-
-	return maxValue
 end
 
 function SCMResourceBarControllerMixin:UpdateBarLayout()
@@ -1673,7 +1707,7 @@ function SCMResourceBarControllerMixin:Initialize()
 	self:SetScript("OnAttributeChanged", self.OnAttributeChanged)
 	self:SetScript("OnEvent", self.OnEvent)
 	self:RegisterResourceBarEvents()
-	EventRegistry:RegisterCallback(ANCHOR_PROXY_SIZE_CHANGED_EVENT, function(_, proxyGroup, proxy, _width, _height, _selectedAnchorRef, isActiveProxy)
+	EventRegistry:RegisterCallback(ANCHOR_PROXY_SIZE_CHANGED_EVENT, function(_, proxyGroup, proxy, width, height, selectedAnchorRef, isActiveProxy)
 		local barOptions = SCM.resourceBarConfig
 		local primaryBarOptions = barOptions.primaryBar
 		local secondaryBarOptions = barOptions.secondaryBar

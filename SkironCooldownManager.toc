@@ -1,10 +1,10 @@
-## Interface: 120005
+## Interface: 120005, 120007
 ## Title: |cFF4080FFSkiron|r|cFFFFFFFFCooldownManager|r
 ## Author: Permok
 ## Version @project-version@
 ## SavedVariables: SkironCooldownManagerDB
 ## OptionalDeps: Plater, Details, UnhaltedUnitFrames, CooldownViewer, SenseiClassResourceBar, ElvUI
-## IconAtlas: icon_cooldownmanager
+## IconTexture: Interface\AddOns\SkironCooldownManager\Media\Logo.png
 ## X-Curse-Project-ID: 1453035
 ## X-Wago-ID: O67DaZK3
 

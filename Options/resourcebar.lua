@@ -767,7 +767,7 @@ local function AddBarSettings(parent, title, settings, includeManaRoleSettings, 
 	local fontSize = AceGUI:Create("Slider")
 	fontSize:SetRelativeWidth(0.33)
 	fontSize:SetLabel("Font Size")
-	fontSize:SetSliderValues(6, 28, 1)
+	fontSize:SetSliderValues(6, 100, 1)
 	fontSize:SetValue(settings.fontSize)
 	fontSize:SetCallback("OnValueChanged", function(_, _, value)
 		settings.fontSize = value

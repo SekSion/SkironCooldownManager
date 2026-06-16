@@ -157,7 +157,6 @@ end
 
 local function RefreshCastBar()
 	SCM:CreateCastBar()
-	SCM:UpdateCastBar()
 end
 
 local function UpdateIconControlStates(iconOptions, iconPosition, matchBarHeight, iconZoom, iconSize)

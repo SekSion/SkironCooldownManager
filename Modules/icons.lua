@@ -23,6 +23,7 @@ local function ApplyHideChildNow(child)
 	child:EnableMouse(false)
 	child.SCMOnEnter = child.SCMOnEnter or child:GetScript("OnEnter")
 	child:SetScript("OnEnter", nil)
+	SCM:StopCustomGlow(child)
 
 	if not child.SCMAlphaHook then
 		child.SCMAlphaHook = true
@@ -119,7 +120,7 @@ end
 function Icons.UpdateChildGlow(child, isInactive)
 	if child.SCMConfig then
 		if child.SCMConfig.glowWhileActive then
-			if not isInactive then
+			if not isInactive and child.SCMShouldBeVisible then
 				SCM:StartCustomGlow(child)
 				return
 			end
@@ -128,7 +129,7 @@ function Icons.UpdateChildGlow(child, isInactive)
 				SCM:StopCustomGlow(child)
 			end
 		elseif child.SCMConfig.glowWhileInactive then
-			if isInactive then
+			if isInactive and child.SCMShouldBeVisible then
 				SCM:StartCustomGlow(child)
 				return
 			end
@@ -330,7 +331,7 @@ function Icons.ExpandScopedAnchorGroups(viewer, viewerData, scopedAnchorGroups)
 					end
 				elseif oldCooldownID ~= cooldownID or oldGroup ~= group then
 					child.SCMCooldownID = nil
-					
+
 					if oldGroup then
 						Cache.cachedAnchorStates[oldGroup].layoutSignature = nil
 						scopedAnchorGroups[oldGroup] = true
@@ -374,7 +375,7 @@ local function ProcessRegularIcon(child, childData, options)
 	Icons.SetupRegularIconHooks(child)
 
 	local shouldShow = not (childData.hideWhenNotOnCooldown and not Cooldowns.GetChildCooldown(child))
-	local applyNow = shouldShow and child.SCMHidden and not child.SCMLayoutLimited
+	local applyNow = child.SCMShouldBeVisible ~= shouldShow
 	child.SCMChanged = child.SCMChanged or applyNow
 	Icons.SetChildVisibilityState(child, shouldShow, applyNow)
 	child.SCMIconOptions = options

@@ -11,6 +11,7 @@ local GLOBAL_CUSTOM_CONFIG_KEYS = {
 	"itemConfig",
 	"slotConfig",
 	"timerConfig",
+	"bloodlustConfig",
 }
 local PROFILE_OPTION_SECTION_KEYS = {
 	resourceBar = true,
@@ -353,10 +354,10 @@ function SCM:ImportProfile(profileName, importString)
 	end
 
 	self.db.profile.options = options
+	SCM.db:RegisterDefaults(SCM.DefaultDB)
 
 	SCM.appliedOptions = nil
 	SCM:ApplyOptions()
-	SCM.db:RegisterDefaults(SCM.DefaultDB)
 
 	SCM.RefreshCooldownViewerData(true)
 end

@@ -114,6 +114,7 @@ function SCM:RemoveGlobalAnchor(anchorIndex, anchorTabsTbl)
 		self.db.profile.globalCustomConfig.itemConfig,
 		self.db.profile.globalCustomConfig.slotConfig,
 		self.db.profile.globalCustomConfig.timerConfig,
+		self.db.profile.globalCustomConfig.bloodlustConfig,
 	}) do
 		RemoveDeletedAnchorCustomConfig(globalConfig, anchorIndex)
 	end
@@ -252,6 +253,7 @@ function SCM:RemoveAnchor(anchorIndex, anchorTabsTbl)
 		self.customConfig.itemConfig,
 		self.customConfig.slotConfig,
 		self.customConfig.timerConfig,
+		self.customConfig.bloodlustConfig,
 	}) do
 		RemoveDeletedAnchorCustomConfig(customConfig, anchorIndex)
 	end

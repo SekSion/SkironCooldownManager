@@ -12,6 +12,7 @@ local function CreateCustomConfigTables(customConfig)
 	customConfig.itemConfig = GetOrCreateTableEntry(customConfig, "itemConfig")
 	customConfig.slotConfig = GetOrCreateTableEntry(customConfig, "slotConfig")
 	customConfig.timerConfig = GetOrCreateTableEntry(customConfig, "timerConfig")
+	customConfig.bloodlustConfig = GetOrCreateTableEntry(customConfig, "bloodlustConfig")
 
 	local allowedKeys = SCM.DefaultDB.profile.globalCustomConfig
 	for key in pairs(customConfig) do
@@ -187,6 +188,9 @@ function SCM:UpdateDB()
 	self.currentConfig.castBarConfig = self.currentConfig.castBarConfig or {}
 	self.specCastBarConfig = self.currentConfig.castBarConfig
 	self.castBarConfig = CreateSpecFallbackConfig(options.castBar, self.currentConfig.castBarConfig)
+	if self.CastBar then
+		self.CastBar.barOptions = self.castBarConfig
+	end
 
 	self.currentConfig.buffBarsAnchorConfig = self.currentConfig.buffBarsAnchorConfig or {}
 	self.buffBarsAnchorConfig = CreateAnchorConfigTables(self.currentConfig.buffBarsAnchorConfig)

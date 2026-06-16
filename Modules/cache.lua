@@ -128,3 +128,9 @@ function SCM:PixelPerfect(value)
 
 	return pixelPerfectMultiplier
 end
+
+function SCM:PixelPerfectSize(size)
+	local multiplier = self:PixelPerfect()
+	return floor((size / multiplier) + 0.5) * multiplier
+end
+

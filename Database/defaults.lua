@@ -70,6 +70,7 @@ SCM.DefaultDB = {
 			itemConfig = {},
 			slotConfig = {},
 			timerConfig = {},
+			bloodlustConfig = {},
 		},
 		options = {
 			anchorUUFRoles = {
