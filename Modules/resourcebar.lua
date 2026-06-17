@@ -1067,7 +1067,11 @@ local function OnResourceBarEvent(bar, event)
 		return
 	end
 
-	controller:UpdateBarDisplay(bar)
+	if bar.resourceKind == "spellCharges" then
+		controller:ReconfigureBarDisplay(bar)
+	else
+		controller:UpdateBarDisplay(bar)
+	end
 	controller:UpdateRefreshState()
 end
 

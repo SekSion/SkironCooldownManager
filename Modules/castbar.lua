@@ -61,7 +61,7 @@ local function CreatePips(empoweredStages)
 			castBar.StageBands[i] = band
 		end
 
-		local color = stageColors[min(i, #stageColors)]
+		local color = stageColors[i]
 		band:ClearAllPoints()
 		band:SetColorTexture(color.r, color.g, color.b, color.a)
 		band:SetTexelSnappingBias(0)

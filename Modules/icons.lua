@@ -21,6 +21,7 @@ local function ApplyHideChildNow(child)
 	child.SCMHidden = true
 	UIParent.SetAlpha(child, 0)
 	child:EnableMouse(false)
+	child:SetMouseClickEnabled(false)
 	child.SCMOnEnter = child.SCMOnEnter or child:GetScript("OnEnter")
 	child:SetScript("OnEnter", nil)
 	SCM:StopCustomGlow(child)
@@ -74,10 +75,13 @@ function Icons.ShowChild(child)
 	if child.viewerFrame and child.SCMHidden then
 		child.SCMHidden = false
 		UIParent.SetAlpha(child, 1)
-		child:EnableMouse(true)
+		child:SetMouseClickEnabled(false)
 
 		if SCM.showTooltips then
+			child:EnableMouse(true)
 			child:SetScript("OnEnter", child.SCMOnEnter)
+		else
+			child:EnableMouse(false)
 		end
 	end
 end
