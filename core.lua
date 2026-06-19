@@ -455,19 +455,29 @@ function SCM:UpdateCooldownInfo(isFirstLoad)
 			if info then
 				local data = displayData[cooldownID]
 				if data then
-					local spellID = data.spellID
 					self.defaultCooldownViewerConfig[cooldownCategory][data.cooldownID] = data
-					self.defaultCooldownViewerConfig[cooldownCategory].spellIDs[spellID] = data
 					self.defaultCooldownViewerConfig[cooldownCategory].cooldownIDs[data.cooldownID] = data
 					self.defaultCooldownViewerConfig.cooldownIDs[data.cooldownID] = data
 
-					self.defaultCooldownViewerConfig.spellIDs[spellID] = data
-					for _, linkedSpellID in ipairs(data.linkedSpellIDs or {}) do
-						self.defaultCooldownViewerConfig[cooldownCategory].spellIDs[linkedSpellID] = data
-						self.defaultCooldownViewerConfig.spellIDs[linkedSpellID] = data
+					local spellID = data.spellID
+					if spellID then
+						self.defaultCooldownViewerConfig[cooldownCategory].spellIDs[spellID] = data
+						self.defaultCooldownViewerConfig.spellIDs[spellID] = data
+						for _, linkedSpellID in ipairs(data.linkedSpellIDs or {}) do
+							self.defaultCooldownViewerConfig[cooldownCategory].spellIDs[linkedSpellID] = data
+							self.defaultCooldownViewerConfig.spellIDs[linkedSpellID] = data
+						end
 					end
 				end
 			end
+		end
+	end
+end
+
+if IsTestBuild() and not SetDesaturation then
+	SetDesaturation = function(frame, desaturate)
+		if frame.SetDesaturation then
+			frame:SetDesaturation(desaturate and 1 or 0)
 		end
 	end
 end
