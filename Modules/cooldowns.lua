@@ -191,7 +191,7 @@ function Cooldowns.SetNormalCooldown(self, parent)
 	local durationObject
 	local desaturate = false
 
-	local spellID =  FindSpellOverrideByID(parent.SCMSpellID)
+	local spellID = FindSpellOverrideByID(parent.SCMSpellID)
 	local spellCooldown = C_Spell.GetSpellCooldown(spellID)
 	if spellCooldown and spellCooldown.isActive and not spellCooldown.isOnGCD then
 		desaturate = true
@@ -206,6 +206,7 @@ function Cooldowns.SetNormalCooldown(self, parent)
 	end
 
 	if durationObject then
+		self:Clear()
 		parent.Icon.SCMDesaturated = desaturate
 		parent.Icon:SetDesaturated(desaturate)
 		self:SetCooldownFromDurationObject(durationObject)
