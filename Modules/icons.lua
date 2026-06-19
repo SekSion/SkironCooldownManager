@@ -157,8 +157,8 @@ local function OnShow(child)
 			if child.SCMFakeAuraInstanceID and child.SCMUseFixedDuration then
 				child.SCMFixedDuration = GetTime() + Constants.FakeAuras[child.SCMSpellID]
 			elseif child.auraInstanceID then
-				child.SCMAuraInstanceID = child.SCMAuraInstanceID or child.auraInstanceID
-				child.SCMAuraDataUnit = child.SCMAuraDataUnit or child.auraDataUnit
+				child.SCMAuraInstanceID = child.auraInstanceID or child.SCMAuraInstanceID
+				child.SCMAuraDataUnit = child.auraDataUnit or child.SCMAuraDataUnit
 			end
 		end
 
@@ -171,7 +171,7 @@ local function OnHide(child)
 		if child.SCMBuffBar then
 			if child.SCMFakeAuraInstanceID and child.SCMFixedDuration and GetTime() < child.SCMFixedDuration then
 				return
-			elseif child.SCMAuraInstanceID and not child.SCMFakeAuraInstanceID then
+			elseif child.SCMAuraInstanceID and child.SCMAuraDataUnit and not child.SCMFakeAuraInstanceID then
 				local auraData = C_UnitAuras.GetAuraDataByAuraInstanceID(child.SCMAuraDataUnit, child.SCMAuraInstanceID)
 				if auraData and auraData.isFromPlayerOrPlayerPet then
 					return
@@ -234,6 +234,7 @@ function Icons.SetupBuffBarHooks(child)
 		child.SCMUseFixedDuration = type(Constants.FakeAuras[child.SCMSpellID]) == "number" and Constants.FakeAuras[child.SCMSpellID]
 	else
 		child:HookScript("OnShow", OnShow)
+		hooksecurefunc(child, "OnAuraInstanceInfoSet", OnShow)
 		hooksecurefunc(child, "OnAuraInstanceInfoCleared", OnHide)
 
 		child.SCMFakeAuraInstanceID = nil

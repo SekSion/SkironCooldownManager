@@ -1,6 +1,7 @@
-### Version 1.5.30 [Alpha]
+### Version 1.5.33 [Alpha]
 
 Additions:
 
 Fixes:
-- Fix the background anchoring for "Bars Only" buff bars
+- Fix the button glow
+- Hopefully fix buff bars disappearing
