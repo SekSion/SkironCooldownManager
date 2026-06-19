@@ -457,15 +457,15 @@ function SCM:UpdateCooldownInfo(isFirstLoad)
 				if data then
 					local spellID = data.spellID
 					self.defaultCooldownViewerConfig[cooldownCategory][data.cooldownID] = data
-					--self.defaultCooldownViewerConfig[cooldownCategory].spellIDs[spellID] = data
+					self.defaultCooldownViewerConfig[cooldownCategory].spellIDs[spellID] = data
 					self.defaultCooldownViewerConfig[cooldownCategory].cooldownIDs[data.cooldownID] = data
 					self.defaultCooldownViewerConfig.cooldownIDs[data.cooldownID] = data
 
-					-- self.defaultCooldownViewerConfig.spellIDs[spellID] = data
-					-- for _, linkedSpellID in ipairs(data.linkedSpellIDs or {}) do
-					-- 	self.defaultCooldownViewerConfig[cooldownCategory].spellIDs[linkedSpellID] = data
-					-- 	self.defaultCooldownViewerConfig.spellIDs[linkedSpellID] = data
-					-- end
+					self.defaultCooldownViewerConfig.spellIDs[spellID] = data
+					for _, linkedSpellID in ipairs(data.linkedSpellIDs or {}) do
+						self.defaultCooldownViewerConfig[cooldownCategory].spellIDs[linkedSpellID] = data
+						self.defaultCooldownViewerConfig.spellIDs[linkedSpellID] = data
+					end
 				end
 			end
 		end
