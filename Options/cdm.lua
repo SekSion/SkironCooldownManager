@@ -280,6 +280,97 @@ local presetButtonConfigs = {
 			}
 		}
 	},
+	-- This should really be a new table.
+	["RACIALS"] = {
+		-- Stoneform
+		{
+			text = "|T136225:16:16|t Stoneform",
+			configID = 20594,
+			iconType = "spell",
+			buildIconData = BuildSpellIconData,
+			config = {
+				useLoadRace = true,
+				loadRaces = { [3] = true },
+			}
+		},
+		-- Shadowmeld
+		{
+			text = "|T132089:16:16|t Shadowmeld",
+			configID = 58984,
+			iconType = "spell",
+			buildIconData = BuildSpellIconData,
+			config = {
+				useLoadRace = true,
+				loadRaces = { [4] = true },
+			}
+		},
+		-- Blood Fury
+		{
+			text = "|T135726:16:16|t Blood Fury",
+			configID = 20572,
+			iconType = "spell",
+			buildIconData = BuildSpellIconData,
+			config = {
+				useLoadRace = true,
+				loadRaces = { [2] = true },
+			}
+		},
+		-- Berserking
+		{
+			text = "|T135727:16:16|t Berserking",
+			configID = 26297,
+			iconType = "spell",
+			buildIconData = BuildSpellIconData,
+			config = {
+				useLoadRace = true,
+				loadRaces = { [8] = true },
+			}
+		},
+		-- Ancestral Call
+		{
+			text = "|T2021574:16:16|t Ancestral Call",
+			configID = 274738,
+			iconType = "spell",
+			buildIconData = BuildSpellIconData,
+			config = {
+				useLoadRace = true,
+				loadRaces = { [36] = true },
+			}
+		},
+		-- Spatial Rift
+		{
+			text = "|T1724004:16:16|t Spatial Rift",
+			configID = 256948,
+			iconType = "spell",
+			buildIconData = BuildSpellIconData,
+			config = {
+				useLoadRace = true,
+				loadRaces = { [29] = true },
+			}
+		},
+		-- Fireblood
+		{
+			text = "|T1786406:16:16|t Fireblood",
+			configID = 265221,
+			iconType = "spell",
+			buildIconData = BuildSpellIconData,
+			config = {
+				useLoadRace = true,
+				loadRaces = { [34] = true },
+			}
+		},
+		-- War Stomp
+		{
+			text = "|T132368:16:16|t War Stomp",
+			configID = 20549,
+			iconType = "spell",
+			buildIconData = BuildSpellIconData,
+			config = {
+				useLoadRace = true,
+				loadRaces = { [6] = true },
+			}
+		},
+	}
 }
 
 local function CreateCustomIconButton(rootDescription, scrollFrame, anchorIndex, isGlobal, buttonConfig)
