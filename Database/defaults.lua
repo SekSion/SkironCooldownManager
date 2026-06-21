@@ -111,6 +111,7 @@ SCM.DefaultDB = {
 			chargeRelativePoint = "BOTTOMRIGHT",
 			chargeXOffset = -8,
 			chargeYOffset = 10,
+			chargeColour = { r = 1, g = 1, b = 1, a = 1 },
 
 			changeCooldownFont = true,
 			cooldownFont = "Expressway",

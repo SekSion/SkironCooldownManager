@@ -656,6 +656,16 @@ local function SelectGlobalSettingsTab(tabWidget, group, options)
 		end)
 		chargeSettings:AddChild(yOffset)
 
+		local chargeColour = AceGUI:Create("ColorPicker")
+		chargeColour:SetLabel("Colour")
+		chargeColour:SetRelativeWidth(0.33)
+		chargeColour:SetColor(options.chargeColour.r, options.chargeColour.g, options.chargeColour.b, options.chargeColour.a or 1)
+		chargeColour:SetCallback("OnValueChanged", function(_, _, r, g, b, a)
+			options.chargeColour = { r = r, g = g, b = b, a = a }
+			SCM:ApplyAllCDManagerConfigs()
+		end)
+		chargeSettings:AddChild(chargeColour)
+
 		local cooldownTextSettings = AceGUI:Create("InlineGroup")
 		cooldownTextSettings:SetLayout("flow")
 		cooldownTextSettings:SetFullWidth(true)

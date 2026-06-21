@@ -39,6 +39,9 @@ local function ApplyChargeAndApplicationStyle(child, options, fontPath)
 			rowConfig.chargeYOffset or options.chargeYOffset
 		)
 
+		local chargeColour = rowConfig.chargeColour or options.chargeColour
+		child.ChargeCount.Current:SetTextColor(chargeColour.r, chargeColour.g, chargeColour.b, chargeColour.a or 1)
+
 		child.ChargeCount.Current.SCMRowConfig = rowConfig
 
 		if child.SCMCooldownID and not child.SCMCustom then
@@ -83,6 +86,9 @@ local function ApplyChargeAndApplicationStyle(child, options, fontPath)
 			rowConfig.applicationsXOffset or options.chargeXOffset,
 			rowConfig.applicationsYOffset or options.chargeYOffset
 		)
+
+		local chargeColour = rowConfig.chargeColour or options.chargeColour
+		child.Applications.Applications:SetTextColor(chargeColour.r, chargeColour.g, chargeColour.b, chargeColour.a or 1)
 
 	end
 end
