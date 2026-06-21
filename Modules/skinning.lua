@@ -178,7 +178,7 @@ local function OnSetCooldown(self)
 	ApplyCooldownFont(self, options)
 end
 
-local function ApplyCooldownStyle(child, options)
+local function ApplyCooldownStyle(child, options, childConfig)
 	local cooldownFrame = child.GetCooldownFrame and child:GetCooldownFrame() or child.Cooldown
 	if cooldownFrame then
 		if child.SCMCooldownSkinHook then
@@ -190,12 +190,16 @@ local function ApplyCooldownStyle(child, options)
 			child.CooldownFlash:SetAlpha(0)
 		end
 
-		cooldownFrame:SetParent(child.SCMCooldownParent)
-		cooldownFrame.SCMParent = child
-		cooldownFrame:ClearAllPoints()
-		cooldownFrame:SetPoint("TOPLEFT", child.SCMCooldownParent, "TOPLEFT", -5, 5)
-		cooldownFrame:SetPoint("BOTTOMRIGHT", child.SCMCooldownParent, "BOTTOMRIGHT", 5, -5)
 		cooldownFrame:SetSwipeTexture("Interface\\Buttons\\WHITE8x8")
+		cooldownFrame:ClearAllPoints()
+		if childConfig and childConfig.expCooldownThing then
+			cooldownFrame:SetAllPoints(child)
+		else
+			cooldownFrame:SetPoint("TOPLEFT", child, "TOPLEFT", 0, 0)
+			cooldownFrame:SetPoint("BOTTOMRIGHT", child, "BOTTOMRIGHT", -SCM:PixelPerfectSize(1), SCM:PixelPerfectSize(1))
+		end
+
+		cooldownFrame.SCMParent = child
 
 		hooksecurefunc(cooldownFrame, "SetCooldown", OnSetCooldown)
 		OnSetCooldown(cooldownFrame)
@@ -271,18 +275,6 @@ function SCM:SkinChild(child, childConfig)
 			region:SetSnapToPixelGrid(false)
 		end
 
-		child.SCMCooldownParent = child.SCMCooldownParent or CreateFrame("Frame", nil, child)
-		child.SCMCooldownParent:ClearAllPoints()
-
-		--TODO: How to get the cooldown frame aligned with the visible part of a frame? Please tell me
-		if (childConfig and childConfig.expCooldownThing)  then
-			child.SCMCooldownParent:SetAllPoints(child)
-		else
-			child.SCMCooldownParent:SetPoint("TOPLEFT", child, "TOPLEFT", 0, 0)
-			child.SCMCooldownParent:SetPoint("BOTTOMRIGHT", child, "BOTTOMRIGHT", -SCM:PixelPerfectSize(1), SCM:PixelPerfectSize(1))
-		end
-		child.SCMCooldownParent:SetClipsChildren(true)
-
 		local textureRegion
 		for _, region in ipairs({ child:GetRegions() }) do
 			if region:IsObjectType("Texture") then
@@ -313,7 +305,7 @@ function SCM:SkinChild(child, childConfig)
 
 		ApplyZoomSettings(child, options)
 		ApplyChargeAndApplicationStyle(child, options, LSM:Fetch("font", options.chargeFont))
-		ApplyCooldownStyle(child, options)
+		ApplyCooldownStyle(child, options, childConfig)
 	end
 
 	for _, customSkin in ipairs(SCM.Skins) do
