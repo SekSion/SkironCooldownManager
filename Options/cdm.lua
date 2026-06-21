@@ -1095,6 +1095,66 @@ local function SelectRow(widget, rowWidget, parentWidget, scrollFrame, data, anc
 		return
 	end
 
+	local buttonGroup = AceGUI:Create("SimpleGroup")
+	buttonGroup:SetFullWidth(true)
+	buttonGroup:SetLayout("flow")
+	widget:AddChild(buttonGroup)
+
+	local addRowButton = AceGUI:Create("Button")
+	addRowButton:SetText("Add Row")
+	addRowButton:SetRelativeWidth(0.5)
+	addRowButton:SetDisabled(#rowTabsTbl >= 9)
+	addRowButton:SetCallback("OnClick", function()
+		local nextIndex = (useDataRowConfig and (#data.rowConfig + 1)) or SCM:AddRow(anchorIndex)
+		if isGlobal then
+			data.rowConfig[nextIndex] = { iconHeight = 40, iconWidth = 40, limit = 8 }
+		elseif isBuffBar then
+			data.rowConfig[nextIndex] = { iconHeight = 40, iconWidth = 150, limit = 8 }
+		elseif isProfileConfig then
+			data.rowConfig[nextIndex] = { iconHeight = 40, iconWidth = 40, limit = 8 }
+		end
+
+		tinsert(rowTabsTbl, { value = nextIndex, text = "Row " .. nextIndex })
+		table.sort(rowTabsTbl, function(a, b)
+			return a.value < b.value
+		end)
+		widget:SetTabs(rowTabsTbl)
+		widget:SelectTab(nextIndex)
+		ApplyModeConfigUpdate(anchorIndex, mode)
+	end)
+	buttonGroup:AddChild(addRowButton)
+
+	local deleteRowButton = AceGUI:Create("Button")
+	deleteRowButton:SetText("Delete Row")
+	deleteRowButton:SetRelativeWidth(0.5)
+	deleteRowButton:SetDisabled(rowIndex == 1)
+	deleteRowButton:SetCallback("OnClick", function()
+		if useDataRowConfig then
+			tremove(data.rowConfig, rowIndex)
+		else
+			SCM:RemoveRow(anchorIndex, rowIndex)
+		end
+
+		local removedIndex
+		for i, tab in ipairs(rowTabsTbl) do
+			if tab.value == rowIndex then
+				removedIndex = i
+				tremove(rowTabsTbl, i)
+				break
+			end
+		end
+
+		for i = removedIndex, #rowTabsTbl do
+			rowTabsTbl[i].value = i
+			rowTabsTbl[i].text = "Row " .. i
+		end
+
+		widget:SetTabs(rowTabsTbl)
+		widget:SelectTab(#rowTabsTbl)
+		ApplyModeConfigUpdate(anchorIndex, mode)
+	end)
+	buttonGroup:AddChild(deleteRowButton)
+
 	local rowConfig = data.rowConfig[rowIndex]
 	local widthLabel = isBuffBar and "Bar Width" or "Icon Width"
 	local heightLabel = isBuffBar and "Bar Height" or "Icon Height"
