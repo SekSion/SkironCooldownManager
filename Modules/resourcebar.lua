@@ -485,7 +485,7 @@ local function UpdateSpellChargeRecharge(bar, chargeInfo)
 	segment:SetWidth(segmentWidth)
 	segment:SetHeight(segmentHeight)
 	UpdateRechargeSegment(bar)
-	segment:SetTimerDuration(duration, Enum.StatusBarInterpolation.Immediate, Enum.StatusBarTimerDirection.ElapsedTime)
+	segment:SetTimerDuration(duration, bar.barOptions.useSmoothPowerUpdates and Enum.StatusBarInterpolation.ExponentialEaseOut or Enum.StatusBarInterpolation.Immediate, Enum.StatusBarTimerDirection.ElapsedTime)
 	segment:SetAlpha(C_CurveUtil.EvaluateColorValueFromBoolean(duration:IsZero(), 0, 1))
 	segment:Show()
 end
@@ -843,7 +843,7 @@ local function UpdateSegmentValues(bar, segmentBars, segmentCount, currentValue,
 		end
 
 		segmentBar:SetStatusBarColor(segmentR, segmentG, segmentB)
-		segmentBar:SetValue(segmentProgress,bar.barOptions.useSmoothPowerUpdates and 1 or 0)
+		segmentBar:SetValue(segmentProgress, bar.barOptions.useSmoothPowerUpdates and Enum.StatusBarInterpolation.ExponentialEaseOut or Enum.StatusBarInterpolation.Immediate)
 	end
 end
 
