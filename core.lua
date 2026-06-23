@@ -320,6 +320,8 @@ function SCM:ITEM_DATA_LOAD_RESULT(itemID, success)
 end
 
 local function OnProfileChanged(_, _, _, skipReset)
+	if SCM.importingProfile then return end
+
 	-- Hopefully players won't change profiles that much that we reach the frame limit :)
 	if not skipReset then
 		SCM.DB:ResetData()
