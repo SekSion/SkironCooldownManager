@@ -207,6 +207,7 @@ function Cooldowns.SetNormalCooldown(self, parent)
 		end
 	end
 
+	local options = SCM.db.profile.options
 	if durationObject then
 		self:Clear()
 		parent.Icon.SCMDesaturated = desaturate
@@ -220,7 +221,7 @@ function Cooldowns.SetNormalCooldown(self, parent)
 			self:SetDrawSwipe(true)
 			self:SetCooldownFromDurationObject(durationObject)
 		end
-	else
+	elseif not self:GetUseAuraDisplayTime() or (options.disableRegularIconActiveSwipe and not parent.SCMConfig.forceActiveSwipe)  then
 		parent.Icon.SCMDesaturated = nil
 		parent.Icon:SetDesaturated(false)
 		self:Clear()
