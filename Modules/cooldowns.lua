@@ -34,7 +34,7 @@ local function OnBuffCooldownSet(self)
 		parent.SCMFixedDuration = parent.SCMFixedDuration or GetTime() + parent.SCMUseFixedDuration
 	end
 
-	if not parent.SCMHidden or parent.SCMConfig.alwaysShow then
+	if not parent.SCMHidden or (not SCM.isHideWhenInactiveEnabled and parent.SCMConfig.alwaysShow) then
 		Icons.UpdateChildDesaturation(parent, false)
 		Icons.UpdateChildGlow(parent, false)
 
@@ -72,7 +72,7 @@ local function OnBuffCooldownEnd(self)
 
 	Icons.UpdateChildGlow(parent, true)
 
-	if parent.SCMConfig.alwaysShow then
+	if (not SCM.isHideWhenInactiveEnabled and parent.SCMConfig.alwaysShow) then
 		Icons.UpdateChildDesaturation(parent, true)
 		return
 	end
