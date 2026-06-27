@@ -356,6 +356,7 @@ function SCM:ImportProfile(profileName, importString)
 
 	self.db.profile.options = options
 	SCM.db:RegisterDefaults(SCM.DefaultDB)
+	SCM:UpdateDB()
 
 	SCM.appliedOptions = nil
 	SCM:ApplyOptions()
