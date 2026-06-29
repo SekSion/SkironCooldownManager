@@ -27,7 +27,9 @@ local function TriggerBloodlustTimers()
 end
 
 local function OnBloodlustUnitAura(_, _, unit, updateInfo)
-	if unit ~= "player" or updateInfo.isFullUpdate or not updateInfo.addedAuras then return end
+	if unit ~= "player" or updateInfo.isFullUpdate or not updateInfo.addedAuras then
+		return
+	end
 
 	for _, auraInfo in pairs(updateInfo.addedAuras) do
 		if auraInfo and auraInfo.auraInstanceID then
@@ -42,7 +44,10 @@ end
 
 local function UpdateBloodlustTimerEvent()
 	if #BloodlustTimerEntries > 0 then
-		if not BloodlustTimerEventFrame then BloodlustTimerEventFrame = CreateFrame("Frame") BloodlustTimerEventFrame:SetScript("OnEvent", OnBloodlustUnitAura) end
+		if not BloodlustTimerEventFrame then
+			BloodlustTimerEventFrame = CreateFrame("Frame")
+			BloodlustTimerEventFrame:SetScript("OnEvent", OnBloodlustUnitAura)
+		end
 		BloodlustTimerEventFrame:RegisterUnitEvent("UNIT_AURA", "player")
 	elseif BloodlustTimerEventFrame then
 		BloodlustTimerEventFrame:UnregisterEvent("UNIT_AURA")
@@ -165,6 +170,10 @@ local function OnCustomIconShow(self)
 		return
 	end
 
+	if self.SCMSkipShowValidation then
+		return
+	end
+
 	if self.SCMIconType == "empty" then
 		return
 	end
@@ -241,9 +250,11 @@ local function SetCustomItemID(frame, config)
 end
 
 local function SetCustomIconCountText(frame, iconType, config)
-	if iconType == "spell" or iconType == "slot" or iconType == "timer" or iconType == "bloodlust" then
+	if iconType == "slot" or iconType == "timer" or iconType == "bloodlust" then
 		frame.ChargeCount.Current:SetText("")
 		frame.ChargeCount.Current:Hide()
+		return
+	elseif iconType == "spell" then
 		return
 	end
 
@@ -366,6 +377,7 @@ local function UpdateCustomIconCooldown(frame, iconType, config)
 			frame.Icon:SetDesaturated(true)
 			frame.Cooldown:SetDrawEdge(false)
 			frame.Cooldown:SetSwipeColor(0, 0, 0, 0.7)
+			frame.Cooldown:Clear()
 			frame.Cooldown:SetCooldownFromDurationObject(durationObject)
 			frame.Icon:SetDesaturation(C_CurveUtil.EvaluateColorValueFromBoolean(durationObject:IsZero(), 0, 1))
 			isOnCooldown = true
@@ -374,6 +386,7 @@ local function UpdateCustomIconCooldown(frame, iconType, config)
 		spellCooldown = C_Spell.GetSpellCharges(config.spellID)
 
 		if not isOnCooldown and spellCooldown and spellCooldown.isActive and not spellCooldown.isOnGCD then
+			frame.Cooldown:Clear()
 			frame.Cooldown:SetCooldownFromDurationObject(C_Spell.GetSpellChargeDuration(config.spellID, true))
 			frame.Icon:SetDesaturated(false)
 			frame.Cooldown:SetDrawEdge(true)
@@ -477,7 +490,17 @@ local function UpdateCustomIconCharges(frame, spellID)
 		return
 	end
 
-	local success, charges = pcall(C_StringUtil.TruncateWhenZero, chargeInfo and C_Spell.GetSpellDisplayCount(spellID) or C_Spell.GetSpellCastCount(spellID))
+	if chargeInfo then
+		if chargeInfo.maxCharges > 1 or frame.SCMConfig.forceShowCharges then
+			frame.ChargeCount.Current:SetText(chargeInfo.currentCharges)
+			frame.ChargeCount.Current:Show()
+		else
+			frame.ChargeCount.Current:Hide()
+		end
+		return
+	end
+
+	local success, charges = pcall(C_StringUtil.TruncateWhenZero, C_Spell.GetSpellCastCount(spellID))
 	if success then
 		frame.ChargeCount.Current:SetText(charges)
 		frame.ChargeCount.Current:Show()

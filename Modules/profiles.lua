@@ -300,6 +300,7 @@ function SCM:ImportProfile(profileName, importString)
 		profileName = SCM.db:GetCurrentProfile()
 	end
 
+	SCM.importingProfile = true
 	SCM.db:SetProfile(profileName)
 
 	local db = self.db.profile
@@ -355,11 +356,13 @@ function SCM:ImportProfile(profileName, importString)
 
 	self.db.profile.options = options
 	SCM.db:RegisterDefaults(SCM.DefaultDB)
+	SCM:UpdateDB()
 
 	SCM.appliedOptions = nil
 	SCM:ApplyOptions()
 
 	SCM.RefreshCooldownViewerData(true)
+	SCM.importingProfile = nil
 end
 
 function SCM:ImportGlobalSettings(importString)

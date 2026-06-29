@@ -46,6 +46,28 @@ function SCM:StartCustomGlow(child)
 			"SCM",
 			1
 		)
+
+		-- Why do I have to do this?
+		local glowFrame = child["_PixelGlowSCM"]
+		if glowFrame then
+			glowFrame:ClearAllPoints()
+			glowFrame:SetPoint("TOPLEFT", child, "TOPLEFT", -glowTypeOptions.xOffset, glowTypeOptions.yOffset)
+			glowFrame:SetPoint("BOTTOMRIGHT", child, "BOTTOMRIGHT", glowTypeOptions.xOffset, -glowTypeOptions.yOffset)
+
+			for _, texture in pairs(glowFrame.textures) do
+				texture:SetTexelSnappingBias(0)
+				texture:SetSnapToPixelGrid(false)
+
+				if glowTypeOptions.border then
+					texture:SetBlendMode("ADD")
+				end
+			end
+
+			for _, mask in pairs(glowFrame.masks) do
+				mask:SetTexelSnappingBias(0)
+				mask:SetSnapToPixelGrid(false)
+			end
+		end
 	elseif options.glowType == "Button" then
 		LibCustomGlow.ButtonGlow_Start(child, color, glowTypeOptions.frequency)
 	end

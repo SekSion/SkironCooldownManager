@@ -105,7 +105,14 @@ function Icons.SetChildVisibilityState(child, shouldShow, applyNow)
 	end
 
 	if child.SCMCustom and not child:GetAttribute("statehidden") then
-		child:SetShown(shouldShow and not child.SCMLayoutLimited)
+		local shouldBeShown = child.SCMShouldBeVisible and not child.SCMLayoutLimited
+		if child:IsShown() == shouldBeShown then
+			return
+		end
+
+		child.SCMSkipShowValidation = shouldBeShown and true or nil
+		child:SetShown(shouldBeShown)
+		child.SCMSkipShowValidation = nil
 	end
 end
 

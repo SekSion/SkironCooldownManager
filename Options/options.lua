@@ -4,11 +4,12 @@ local AceGUI = LibStub("AceGUI-3.0")
 local LibEditModeOverride = LibStub("LibEditModeOverride-1.0")
 local LibCustomGlow = LibStub("LibCustomGlow-1.0")
 local LibWindow = LibStub("LibWindow-1.1")
+local Options = SCM.Options
 local Utils = SCM.Utils
 local ToGlobalGroup = Utils.ToGlobalGroup
 local ToBuffBarGroup = Utils.ToBuffBarGroup
-local NormalizeBuffBarGroup = Utils.NormalizeBuffBarGroup
 local GetCooldownConfigKey = Utils.GetCooldownConfigKey
+local UPDATE_SCOPE = SCM.CDM.UPDATE_SCOPE
 
 StaticPopupDialogs["SCM_FORCE_RELOAD_POPUP"] = {
 	text = "This requires a UI reload. Reload now?",
@@ -48,304 +49,46 @@ function SCM.Decode(importString)
 	return data
 end
 
-function SCM:AddGlobalAnchor(anchorTabsTbl)
-	local anchorConfig = self.db.profile.globalAnchorConfig
-	local nextIndex = #anchorConfig + 1
-	anchorConfig[nextIndex] = {
-		anchor = { "CENTER", "UIParent", "CENTER", 0, 0 },
-		rowConfig = {
-			[1] = {
-				size = 40,
-				limit = 8,
-			},
-		},
-	}
-	self:InvalidateAnchorLinks()
-	tinsert(anchorTabsTbl, { value = nextIndex, text = "Anchor " .. nextIndex })
-	SCM:ApplyAllCDManagerConfigs()
-	return nextIndex
+function Options.GetEffectiveAnchorGroup(anchorIndex, mode)
+	if mode == "global" then
+		return ToGlobalGroup(anchorIndex)
+	end
+
+	if mode == "buffbars" then
+		return ToBuffBarGroup(anchorIndex)
+	end
+
+	return anchorIndex
 end
 
-function SCM:AddBuffBarAnchor(anchorTabsTbl)
-	local anchorConfig = self.buffBarsAnchorConfig
-	local nextIndex = #anchorConfig + 1
-	anchorConfig[nextIndex] = {
-		anchor = { "CENTER", "UIParent", "CENTER", 0, 0 },
-		rowConfig = {
-			[1] = {
-				iconWidth = 150,
-				iconHeight = 40,
-				limit = 8,
-			},
-		},
-	}
-	self:InvalidateAnchorLinks()
-	tinsert(anchorTabsTbl, { value = nextIndex, text = "Anchor " .. nextIndex })
-	SCM:ApplyBuffBarCDManagerConfig()
-	return nextIndex
-end
-
-local function RemoveDeletedAnchorCustomConfig(configTable, anchorIndex)
-	if type(configTable) ~= "table" then
-		return
-	end
-
-	for id, config in pairs(configTable) do
-		if config.anchorGroup == anchorIndex then
-			SCM.CustomIcons.ReleaseIcon(id, config)
-			configTable[id] = nil
-		elseif config.anchorGroup and config.anchorGroup > anchorIndex then
-			config.anchorGroup = config.anchorGroup - 1
-		end
-	end
-end
-
-function SCM:RemoveGlobalAnchor(anchorIndex, anchorTabsTbl)
-	if self.db.profile.globalAnchorConfig[anchorIndex] then
-		tremove(self.db.profile.globalAnchorConfig, anchorIndex)
-	end
-
-	local globalAnchorIndex = ToGlobalGroup(#anchorTabsTbl)
-	self.anchorFrames[globalAnchorIndex]:Hide()
-	self.anchorFrames[globalAnchorIndex] = nil
-
-	for _, globalConfig in pairs({
-		self.db.profile.globalCustomConfig.spellConfig,
-		self.db.profile.globalCustomConfig.itemConfig,
-		self.db.profile.globalCustomConfig.slotConfig,
-		self.db.profile.globalCustomConfig.timerConfig,
-		self.db.profile.globalCustomConfig.bloodlustConfig,
-	}) do
-		RemoveDeletedAnchorCustomConfig(globalConfig, anchorIndex)
-	end
-
-	for i = #anchorTabsTbl, 1, -1 do
-		if anchorTabsTbl[i].value == anchorIndex then
-			tremove(anchorTabsTbl, i)
-		end
-	end
-	for i, tab in ipairs(anchorTabsTbl) do
-		tab.value = i
-		tab.text = "Anchor " .. i
-	end
-
-	self:InvalidateAnchorLinks()
-	SCM:ApplyAllCDManagerConfigs()
-end
-
-function SCM:RemoveBuffBarAnchor(anchorIndex, anchorTabsTbl)
-	local oldAnchorCount = #self.buffBarsAnchorConfig
-	if self.buffBarsAnchorConfig[anchorIndex] then
-		tremove(self.buffBarsAnchorConfig, anchorIndex)
-	end
-
-	local removedGroup = ToBuffBarGroup(anchorIndex)
-	local buffBarAnchorFrame = self.anchorFrames[ToBuffBarGroup(#anchorTabsTbl)]
-	if buffBarAnchorFrame then
-		buffBarAnchorFrame:Hide()
-		self.anchorFrames[ToBuffBarGroup(#anchorTabsTbl)] = nil
-	end
-
-	for configID, config in pairs(self.spellConfig) do
-		local trackedBarGroup = config.source and config.source[Enum.CooldownViewerCategory.TrackedBar]
-		if trackedBarGroup == removedGroup then
-			config.source[Enum.CooldownViewerCategory.TrackedBar] = nil
-			config.anchorGroup[removedGroup] = nil
-
-			if not next(config.anchorGroup) then
-				self.spellConfig[configID] = nil
-			end
-		elseif trackedBarGroup and Utils.IsBuffBarGroup(trackedBarGroup) and trackedBarGroup > removedGroup and trackedBarGroup <= ToBuffBarGroup(oldAnchorCount) then
-			local newGroup = trackedBarGroup - 1
-			config.source[Enum.CooldownViewerCategory.TrackedBar] = newGroup
-			config.anchorGroup[newGroup] = config.anchorGroup[trackedBarGroup]
-			config.anchorGroup[trackedBarGroup] = nil
-		elseif trackedBarGroup and Utils.IsBuffBarGroup(trackedBarGroup) and not self.buffBarsAnchorConfig[trackedBarGroup - 200] then
-			config.source[Enum.CooldownViewerCategory.TrackedBar] = nil
-			config.anchorGroup[trackedBarGroup] = nil
-
-			if not next(config.anchorGroup) then
-				self.spellConfig[configID] = nil
-			end
-		end
-	end
-
-	for i = #anchorTabsTbl, 1, -1 do
-		if anchorTabsTbl[i].value == anchorIndex then
-			tremove(anchorTabsTbl, i)
-		end
-	end
-	for i, tab in ipairs(anchorTabsTbl) do
-		tab.value = i
-		tab.text = "Anchor " .. i
-	end
-
-	self:InvalidateAnchorLinks()
-	SCM:ApplyBuffBarCDManagerConfig()
-end
-
-function SCM:AddAnchor(anchorTabsTbl)
-	local nextIndex = #SCM.anchorConfig + 1
-	self.anchorConfig[nextIndex] = {
-		anchor = { "CENTER", "UIParent", "CENTER", 0, 0 },
-		rowConfig = {
-			[1] = {
-				size = 40,
-				limit = 8,
-			},
-		},
-	}
-
-	tinsert(anchorTabsTbl, { value = nextIndex, text = "Anchor " .. nextIndex })
-	table.sort(anchorTabsTbl, function(a, b)
-		return a.value < b.value
-	end)
-
-	self:InvalidateAnchorLinks()
-	SCM:ApplyAllCDManagerConfigs()
-
-	return nextIndex
-end
-
-function SCM:RemoveAnchor(anchorIndex, anchorTabsTbl)
-	if self.anchorConfig[anchorIndex] then
-		tremove(self.anchorConfig, anchorIndex)
-	end
-
-	local removedIndex
-	for i, tab in ipairs(anchorTabsTbl) do
-		if tab.value == anchorIndex then
-			removedIndex = i
-			tremove(anchorTabsTbl, i)
-			break
-		end
-	end
-
-	for i = removedIndex, #anchorTabsTbl do
-		anchorTabsTbl[i].value = i
-		anchorTabsTbl[i].text = "Anchor " .. i
-	end
-
-	self.anchorFrames[#self.anchorFrames]:Hide()
-	self.anchorFrames[#self.anchorFrames] = nil
-
-	for spellID, config in pairs(self.spellConfig) do
-		for sourceIndex, anchorGroup in pairs(config.source) do
-			if not Utils.IsBuffBarGroup(anchorGroup) and anchorGroup == anchorIndex then
-				config.source[sourceIndex] = nil
-				config.anchorGroup[anchorGroup] = nil
-
-				if not next(config.source) then
-					self.spellConfig[spellID] = nil
-				end
-			elseif not Utils.IsBuffBarGroup(anchorGroup) and anchorGroup > anchorIndex then
-				config.source[sourceIndex] = anchorGroup - 1
-				if config.anchorGroup[anchorGroup] then
-					config.anchorGroup[anchorGroup - 1] = config.anchorGroup[anchorGroup]
-					config.anchorGroup[anchorGroup] = nil
-				end
-			end
-		end
-	end
-
-	for _, customConfig in pairs({
-		self.customConfig.spellConfig,
-		self.customConfig.itemConfig,
-		self.customConfig.slotConfig,
-		self.customConfig.timerConfig,
-		self.customConfig.bloodlustConfig,
-	}) do
-		RemoveDeletedAnchorCustomConfig(customConfig, anchorIndex)
-	end
-
-	self:InvalidateAnchorLinks()
-	SCM:ApplyAllCDManagerConfigs()
-
-	return removedIndex
-end
-
-function SCM:AddRow(anchorIndex)
-	local nextIndex = #SCM.anchorConfig[anchorIndex].rowConfig + 1
-	self.anchorConfig[anchorIndex].rowConfig[nextIndex] = {
-		size = 40,
-		limit = 8,
-	}
-
-	return nextIndex
-end
-
-function SCM:RemoveRow(anchorIndex, rowIndex)
-	if self.anchorConfig[anchorIndex].rowConfig[rowIndex] then
-		tremove(self.anchorConfig[anchorIndex].rowConfig, rowIndex)
-	end
-end
-
-function SCM:AddSpellToConfig(anchorGroup, order, info, displayData, sourceIndex)
-	local spellID = displayData.spellID
-	if displayData.linkedSpellIDs and #displayData.linkedSpellIDs == 1 then
-		spellID = displayData.linkedSpellIDs[1]
-	end
-
-	local effectiveAnchorGroup = anchorGroup
-	if sourceIndex == Enum.CooldownViewerCategory.TrackedBar then
-		effectiveAnchorGroup = NormalizeBuffBarGroup(anchorGroup)
-		if not effectiveAnchorGroup then
-			return
-		end
-	end
-
-	local cooldownID = displayData.cooldownID or info.cooldownID
-	local configID = GetCooldownConfigKey(cooldownID)
-	if not configID then
-		return
-	end
-
-	if not self.spellConfig[configID] then
-		self.spellConfig[configID] = {
-			spellID = spellID,
-			cooldownID = cooldownID,
-			source = {
-				[sourceIndex] = effectiveAnchorGroup,
-			},
-			anchorGroup = {
-				[effectiveAnchorGroup] = {
-					order = order,
-				},
-			},
-		}
+function Options.ApplyModeConfigUpdate(anchorIndex, mode)
+	if mode == "global" then
+		SCM:ApplyAnchorGroupCDManagerConfig(anchorIndex, true)
+	elseif mode == "buffbars" then
+		SCM:ApplyAnchorGroupCDManagerConfig(anchorIndex, false, UPDATE_SCOPE.BUFF_BAR)
 	else
-		self.spellConfig[configID].spellID = spellID
-		self.spellConfig[configID].cooldownID = cooldownID or self.spellConfig[configID].cooldownID
-		self.spellConfig[configID].source[sourceIndex] = effectiveAnchorGroup
-		self.spellConfig[configID].anchorGroup[effectiveAnchorGroup] = {
-			order = order,
-		}
+		SCM:ApplyAllCDManagerConfigs(true)
 	end
 end
 
-function SCM:RemoveSpellFromConfig(anchorIndex, data)
-	local configID = data.id or GetCooldownConfigKey(data.cooldownID)
-	local spellConfig = configID and self.spellConfig[configID]
-	if spellConfig then
-		for category, anchorGroup in pairs(spellConfig.source) do
-			if anchorGroup == anchorIndex then
-				spellConfig.source[category] = nil
-			end
-		end
+function Options.SetAnchorHighlight(anchorFrame, state, color)
+	local isActive = state == "active"
+	if anchorFrame.SCMHighlightState == state and anchorFrame.isGlowActive == isActive then
+		return
+	end
 
-		spellConfig.anchorGroup[anchorIndex] = nil
+	anchorFrame.SCMHighlightState = state
+	anchorFrame.isGlowActive = isActive
+	LibCustomGlow.PixelGlow_Stop(anchorFrame, "SCM")
+	LibCustomGlow.PixelGlow_Start(anchorFrame, color, nil, nil, nil, nil, nil, nil, nil, "SCM")
 
-		if not next(spellConfig.anchorGroup) then
-			self.spellConfig[configID] = nil
+	if anchorFrame.debugText then
+		if state == "active" then
+			anchorFrame.debugText:SetTextColor(0.34, 0.70, 0.91, 1)
+		else
+			anchorFrame.debugText:SetTextColor(0.90, 0.62, 0, 1)
 		end
 	end
-end
-
-function SCM:IsSpellInData(cooldownID, source)
-	local configID = GetCooldownConfigKey(cooldownID)
-	local spellConfig = configID and self.spellConfig[configID]
-	local pairedSource = Utils.GetPairedSource(source)
-	return spellConfig and (spellConfig.source[source] or (pairedSource and spellConfig.source[pairedSource]))
 end
 
 function SCM:AddTab(tab)

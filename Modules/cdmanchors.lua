@@ -154,7 +154,7 @@ local function GetAnchorPointOffsets(point, growDir, iconWidth, xOffset, yOffset
 		xOffsetMultiplier = (point == "TOPRIGHT" and -1) or ((point == "TOP" or point == "BOTTOM" or point == "CENTER") and -0.5) or 0
 	end
 
-	return SCM:PixelPerfect(xOffset + (iconWidth or 0) * xOffsetMultiplier), SCM:PixelPerfect(yOffset + anchorOffsetY)
+	return xOffset + (iconWidth or 0) * xOffsetMultiplier, yOffset + anchorOffsetY
 end
 
 local function GetAnchorOffset(group, visited)

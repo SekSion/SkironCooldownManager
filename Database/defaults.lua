@@ -111,7 +111,7 @@ SCM.DefaultDB = {
 			chargeRelativePoint = "BOTTOMRIGHT",
 			chargeXOffset = -8,
 			chargeYOffset = 10,
-
+			chargeColour = { r = 1, g = 1, b = 1, a = 1},
 			changeCooldownFont = true,
 			cooldownFont = "Expressway",
 			cooldownFontSize = 0.6,
@@ -149,6 +149,9 @@ SCM.DefaultDB = {
 					length = 2,
 					thickness = 2,
 					glowColor = { 0.95, 0.95, 0.32, 1 },
+					xOffset = 0,
+					yOffset = 0,
+					border = false,
 				},
 				["Autocast"] = {
 					startAnim = true,
@@ -265,6 +268,7 @@ SCM.DefaultDB = {
 					showValues = true,
 					forceMana = false,
 					showPercentageSign = true,
+					useSmoothPowerUpdates = false,
 					spark = {
 						enable = false,
 						width = 2,
@@ -337,6 +341,7 @@ SCM.DefaultDB = {
 					disableMaelstromOverflow = false,
 					forceMana = false,
 					showPercentageSign = true,
+					useSmoothPowerUpdates = false,
 					spark = {
 						enable = false,
 						width = 2,

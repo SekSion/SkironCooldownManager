@@ -99,3 +99,71 @@ function SCM.DB:RegisterAndLoadConfig(profileName, classFileName, config, specID
 		SCM:LoadNewProfile(true)
 	end
 end
+
+function SCM:GetConfigTable(iconType, isGlobal)
+	if iconType == "spell" then
+		return isGlobal and self.globalCustomConfig.spellConfig or self.customConfig.spellConfig
+	end
+
+	if iconType == "slot" then
+		return isGlobal and self.globalCustomConfig.slotConfig or self.customConfig.slotConfig
+	end
+
+	if iconType == "timer" then
+		return isGlobal and self.globalCustomConfig.timerConfig or self.customConfig.timerConfig
+	end
+
+	if iconType == "bloodlust" then
+		return isGlobal and self.globalCustomConfig.bloodlustConfig or self.customConfig.bloodlustConfig
+	end
+
+	return isGlobal and self.globalCustomConfig.itemConfig or self.customConfig.itemConfig
+end
+
+function SCM:GetConfigTableByID(configID, iconType, isGlobal)
+	local configTable = self:GetConfigTable(iconType, isGlobal)
+	return configTable and configTable[configID]
+end
+
+function SCM:UpdateCooldownInfo()
+	if InCombatLockdown() then
+		return
+	end
+
+	self.defaultCooldownViewerConfig = {
+		cooldownIDs = {},
+		spellIDs = {},
+	}
+
+	local dataProvider = CooldownViewerSettings:GetDataProvider()
+	local displayData = dataProvider and dataProvider.displayData.cooldownInfoByID
+	for _, cooldownCategory in pairs(CooldownViewerSettingsDataProvider_GetCategories()) do
+		self.defaultCooldownViewerConfig[cooldownCategory] = {
+			spellIDs = {},
+			cooldownIDs = {},
+		}
+
+		local cooldownIDs = C_CooldownViewer.GetCooldownViewerCategorySet(cooldownCategory, true)
+		for _, cooldownID in ipairs(cooldownIDs) do
+			local info = C_CooldownViewer.GetCooldownViewerCooldownInfo(cooldownID)
+			if info then
+				local data = displayData[cooldownID]
+				if data then
+					self.defaultCooldownViewerConfig[cooldownCategory][data.cooldownID] = data
+					self.defaultCooldownViewerConfig[cooldownCategory].cooldownIDs[data.cooldownID] = data
+					self.defaultCooldownViewerConfig.cooldownIDs[data.cooldownID] = data
+
+					local spellID = data.spellID
+					if spellID then
+						self.defaultCooldownViewerConfig[cooldownCategory].spellIDs[spellID] = data
+						self.defaultCooldownViewerConfig.spellIDs[spellID] = data
+						for _, linkedSpellID in ipairs(data.linkedSpellIDs or {}) do
+							self.defaultCooldownViewerConfig[cooldownCategory].spellIDs[linkedSpellID] = data
+							self.defaultCooldownViewerConfig.spellIDs[linkedSpellID] = data
+						end
+					end
+				end
+			end
+		end
+	end
+end
